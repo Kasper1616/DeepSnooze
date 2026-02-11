@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project specific files
+#  Add any additional files or directories specific to your project that should be ignored by Git.
+.DS_Store
+data/

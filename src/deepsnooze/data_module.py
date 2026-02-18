@@ -1,16 +1,17 @@
 from pathlib import Path
 
-import numpy as np
 import torch
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, Dataset, Subset, random_split
+from torch.utils.data import DataLoader, Dataset, Subset
 
 
 class SleepyRatDataset(Dataset):
     def __init__(self, processed_path="data/processed", transform=None):
+        files = sorted(Path(processed_path).glob("*.pt"))
+        self.subjects = [f.stem for f in files]
         self.cache = [
             torch.load(f, map_location="cpu", weights_only=True)
-            for f in sorted(Path(processed_path).glob("*.pt"))
+            for f in files
         ]
 
         self.index_map = [
@@ -18,7 +19,11 @@ class SleepyRatDataset(Dataset):
             for file_idx, data_dict in enumerate(self.cache)
             for i in range(len(data_dict["y"]))
         ]
-        self.transform = transform  
+        self.transform = transform
+
+    def subject_of(self, global_idx):
+        file_idx, _ = self.index_map[global_idx]
+        return self.subjects[file_idx]
 
     @property
     def labels(self):
@@ -44,8 +49,7 @@ class SleepDataModule(LightningDataModule):
         self,
         processed_path="data/processed",
         batch_size=16,
-        subset_size=10_000,
-        val_split=0.2,
+        val_subject="A1",
         num_workers=0,
         transform=None,
     ):
@@ -55,12 +59,11 @@ class SleepDataModule(LightningDataModule):
 
     def setup(self, stage=None):
         full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
-        n = min(self.hparams["subset_size"], len(full))
-        indices = np.random.choice(len(full), size=n, replace=False)
-        subset = Subset(full, indices)
-        val_size = int(len(subset) * self.hparams["val_split"])
-        train_size = len(subset) - val_size
-        self.train_ds, self.val_ds = random_split(subset, [train_size, val_size])
+        val_subject = self.hparams["val_subject"]
+        train_indices = [i for i in range(len(full)) if full.subject_of(i) != val_subject]
+        val_indices = [i for i in range(len(full)) if full.subject_of(i) == val_subject]
+        self.train_ds = Subset(full, train_indices)
+        self.val_ds = Subset(full, val_indices)
 
     def train_dataloader(self):
         return DataLoader(

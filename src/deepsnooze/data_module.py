@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
 
 class SleepyRatDataset(Dataset):
-    def __init__(self, processed_path="data/processed"):
+    def __init__(self, processed_path="data/processed", transform=None):
         self.cache = [
             torch.load(f, map_location="cpu", weights_only=True)
             for f in sorted(Path(processed_path).glob("*.pt"))
@@ -25,7 +25,10 @@ class SleepyRatDataset(Dataset):
     def __getitem__(self, idx):
         file_idx, sample_idx = self.index_map[idx]
         d = self.cache[file_idx]
-        return d["X"][sample_idx], d["y"][sample_idx]
+        x, y = d["X"][sample_idx], d["y"][sample_idx]
+        if self.transform:
+            x = self.transform(x)
+        return x, y
 
 
 class SleepDataModule(LightningDataModule):

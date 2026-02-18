@@ -5,32 +5,35 @@ from deepsnooze.data_module import SleepDataModule
 from deepsnooze.models.ffnn import DeepSleepFFNN
 
 from deepsnooze.transforms.standardize_signal import StandardizeSignal
+from deepsnooze.transforms.spectrogram_tranform import SpectrogramTransform
 
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 import torch
 
 if __name__ == "__main__":
+    # datamodule = SleepDataModule(
+    #     processed_path="data/processed", 
+    #     batch_size=64, # Strongly suggest 64 for BatchNorm stability
+    #     transform=StandardizeSignal()
+    # )
+
     datamodule = SleepDataModule(
         processed_path="data/processed", 
         batch_size=64, # Strongly suggest 64 for BatchNorm stability
-        transform=StandardizeSignal()
+        transform=SpectrogramTransform(),
+        subset_size=None
     )
     
     datamodule.setup(stage="fit")
 
 
-    original_ds = datamodule.train_ds.dataset.dataset
+    original_ds = datamodule.train_ds.dataset
     all_labels = np.array(original_ds.labels)
-
-    subset_indices = datamodule.train_ds.dataset.indices
-    train_split_indices = datamodule.train_ds.indices
+    train_indices = datamodule.train_ds.indices
     
-    final_train_indices = [subset_indices[i] for i in train_split_indices]
-    train_labels = all_labels[final_train_indices]
+    train_labels = all_labels[train_indices]
     
-    print(f"DEBUG: Labels dtype is {train_labels.dtype}") 
-    print(f"DEBUG: Unique values are {np.unique(train_labels)}")
 
     class_weights = compute_class_weight(
         class_weight='balanced',
@@ -41,7 +44,8 @@ if __name__ == "__main__":
     label_weights = torch.tensor(class_weights, dtype=torch.float32)
     print(f"Calculated Class Weights: {label_weights}")
 
-    model = DeepSleepFFNN(lr=1e-3, label_weights=label_weights)
+    # model = DeepSleepFFNN(lr=1e-3, label_weights=label_weights)
+    model = DeepSleepFFNN(input_size=3*33*17, lr=1e-3, label_weights=label_weights) # Adjust input size for spectrograms
 
     trainer = Trainer(
         max_epochs=20,

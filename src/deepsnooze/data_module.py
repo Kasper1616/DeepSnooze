@@ -3,8 +3,8 @@ from pathlib import Path
 import numpy as np
 import torch
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, Dataset, Subset, random_split
-
+from torch.utils.data import DataLoader, Dataset, Subset
+from sklearn.model_selection import train_test_split
 
 class SleepyRatDataset(Dataset):
     def __init__(self, processed_path="data/processed", transform=None):
@@ -55,12 +55,28 @@ class SleepDataModule(LightningDataModule):
 
     def setup(self, stage=None):
         full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
-        n = min(self.hparams["subset_size"], len(full))
-        indices = np.random.choice(len(full), size=n, replace=False)
-        subset = Subset(full, indices)
-        val_size = int(len(subset) * self.hparams["val_split"])
-        train_size = len(subset) - val_size
-        self.train_ds, self.val_ds = random_split(subset, [train_size, val_size])
+        
+        indices = np.arange(len(full))
+        labels = np.array(full.labels)
+        subset_size = self.hparams.get("subset_size")
+
+        if subset_size and subset_size < len(full):
+            indices, _, labels, _ = train_test_split(
+                indices, labels,
+                train_size=subset_size,
+                stratify=labels,
+                random_state=42
+            )
+
+        train_idx, val_idx = train_test_split(
+            indices, 
+            test_size=self.hparams["val_split"], 
+            stratify=labels,
+            random_state=42
+        )
+
+        self.train_ds = Subset(full, train_idx)
+        self.val_ds = Subset(full, val_idx)
 
     def train_dataloader(self):
         return DataLoader(

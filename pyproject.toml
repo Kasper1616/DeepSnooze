@@ -16,6 +16,7 @@ dependencies = [
     "lightning>=2.0.0",
     "torchmetrics>=1.0.0",
     "scikit-learn>=1.8.0",
+    "torchaudio>=2.10.0",
 ]
 
 [build-system]

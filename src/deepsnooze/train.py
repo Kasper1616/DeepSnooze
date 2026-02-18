@@ -3,6 +3,7 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 
 from deepsnooze.data_module import SleepDataModule, SleepyRatDataset
 from deepsnooze.models.ffnn import DeepSleepFFNN
+from deepsnooze.models.cnn import SleepyCNN
 
 from deepsnooze.transforms.standardize_signal import StandardizeSignal
 from deepsnooze.transforms.spectrogram_tranform import SpectrogramTransform
@@ -22,7 +23,7 @@ if __name__ == "__main__":
         processed_path="data/processed",
         batch_size=64, 
         val_subject="A1",
-        transform=StandardizeSignal()
+        transform=SpectrogramTransform()
     )
 
     datamodule.setup(stage="fit")
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     print(f"Calculated Class Weights: {label_weights}")
 
     # model = DeepSleepFFNN(lr=1e-3, label_weights=label_weights)
-    model = DeepSleepFFNN(input_size=3*33*17, lr=1e-3, label_weights=label_weights) # Adjust input size for spectrograms
+    model = SleepyCNN(lr=1e-3, label_weights=label_weights) # Adjust input size for spectrograms
 
     trainer = Trainer(
         max_epochs=20,

@@ -213,4 +213,6 @@ __marimo__/
 data/
 lightning_logs/
 
-uv.lock
+*.lock
+
+*.sh

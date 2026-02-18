@@ -72,4 +72,4 @@ class SleepyCNN(LightningModule):
         self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
-        return torch.optim.SGD(self.parameters(), lr=self.hparams.lr, momentum=0.9)
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)

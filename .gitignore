@@ -209,5 +209,6 @@ __marimo__/
 # Project specific files
 #  Add any additional files or directories specific to your project that should be ignored by Git.
 .DS_Store
+.claude
 data/
-data_processed/
+lightning_logs/

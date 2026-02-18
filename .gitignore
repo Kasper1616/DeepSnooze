@@ -210,3 +210,4 @@ __marimo__/
 #  Add any additional files or directories specific to your project that should be ignored by Git.
 .DS_Store
 data/
+data_processed/

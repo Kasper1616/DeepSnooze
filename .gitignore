@@ -212,3 +212,5 @@ __marimo__/
 .claude
 data/
 lightning_logs/
+
+uv.lock

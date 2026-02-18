@@ -18,6 +18,14 @@ class SleepyRatDataset(Dataset):
             for file_idx, data_dict in enumerate(self.cache)
             for i in range(len(data_dict["y"]))
         ]
+        self.transform = transform  
+
+    @property
+    def labels(self):
+        return [
+            int(self.cache[file_idx]["y"][sample_idx]) # Use int() to extract the value
+            for file_idx, sample_idx in self.index_map
+        ]
 
     def __len__(self):
         return len(self.index_map)
@@ -39,12 +47,14 @@ class SleepDataModule(LightningDataModule):
         subset_size=10_000,
         val_split=0.2,
         num_workers=0,
+        transform=None,
     ):
         super().__init__()
         self.save_hyperparameters()
+        self.transform = transform
 
     def setup(self, stage=None):
-        full = SleepyRatDataset(self.hparams["processed_path"])
+        full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
         n = min(self.hparams["subset_size"], len(full))
         indices = np.random.choice(len(full), size=n, replace=False)
         subset = Subset(full, indices)
@@ -67,3 +77,4 @@ class SleepDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.hparams["num_workers"],
         )
+    

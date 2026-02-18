@@ -1,4 +1,4 @@
-from deepsnooze.ffnn import SimpleFFNN
+from deepsnooze.models.ffnn import SimpleFFNN
 from deepsnooze.data_cached import SleepyRatCachedDataset
 from torch.utils.data import random_split
 from torch.utils.data import Subset

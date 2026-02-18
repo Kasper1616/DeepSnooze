@@ -125,7 +125,7 @@ class SleepyRatDataset(Dataset):
 
 if __name__ == "__main__":
     from collections import Counter
-    dataset = SleepyRatDataset(base_path="data/")
+    dataset = SleepyRatDataset(base_path="data/raw")
     print(f"Dataset size: {len(dataset)} samples")
 
     # Example: get first sample

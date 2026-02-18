@@ -6,8 +6,8 @@ from pathlib import Path
 from tqdm import tqdm  # pip install tqdm
 
 # --- CONFIGURATION ---
-RAW_DATA_PATH = Path("data/")
-PROCESSED_PATH = Path("data_processed/")
+RAW_DATA_PATH = Path("data/raw")
+PROCESSED_PATH = Path("data/processed")
 TARGET_SFREQ = 128.0
 EPOCH_DURATION = 4.0
 TARGET_LEN = int(TARGET_SFREQ * EPOCH_DURATION)

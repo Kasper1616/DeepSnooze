@@ -2,7 +2,7 @@ from pathlib import Path
 import torch
 
 class SleepyRatCachedDataset(torch.utils.data.Dataset):
-    def __init__(self, processed_path="data_processed/"):
+    def __init__(self, processed_path="data/processed/"):
         self.processed_path = Path(processed_path)
         self.files = sorted(list(self.processed_path.glob("*.pt")))
         

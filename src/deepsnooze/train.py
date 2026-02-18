@@ -1,8 +1,8 @@
 from lightning import Trainer
-from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 
-from deepsnooze.models.ffnn import SimpleFFNN
 from deepsnooze.data_module import SleepDataModule
+from deepsnooze.models.ffnn import SimpleFFNN
 
 if __name__ == "__main__":
     model = SimpleFFNN(lr=1e-3)
@@ -11,7 +11,9 @@ if __name__ == "__main__":
     trainer = Trainer(
         max_epochs=20,
         callbacks=[
-            ModelCheckpoint(monitor="val_acc", mode="max", save_top_k=1, dirpath="models/"),
+            ModelCheckpoint(
+                monitor="val_acc", mode="max", save_top_k=1, dirpath="models/"
+            ),
             EarlyStopping(monitor="val_loss", patience=5),
         ],
     )

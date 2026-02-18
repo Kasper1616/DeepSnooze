@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import numpy as np
 import torch
-from pathlib import Path
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
@@ -28,8 +29,14 @@ class SleepyRatDataset(Dataset):
 
 
 class SleepDataModule(LightningDataModule):
-    def __init__(self, processed_path="data/processed", batch_size=16,
-                 subset_size=10_000, val_split=0.2, num_workers=0):
+    def __init__(
+        self,
+        processed_path="data/processed",
+        batch_size=16,
+        subset_size=10_000,
+        val_split=0.2,
+        num_workers=0,
+    ):
         super().__init__()
         self.save_hyperparameters()
 
@@ -43,9 +50,17 @@ class SleepDataModule(LightningDataModule):
         self.train_ds, self.val_ds = random_split(subset, [train_size, val_size])
 
     def train_dataloader(self):
-        return DataLoader(self.train_ds, batch_size=self.hparams["batch_size"],
-                          shuffle=True, num_workers=self.hparams["num_workers"])
+        return DataLoader(
+            self.train_ds,
+            batch_size=self.hparams["batch_size"],
+            shuffle=True,
+            num_workers=self.hparams["num_workers"],
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val_ds, batch_size=self.hparams["batch_size"],
-                          shuffle=False, num_workers=self.hparams["num_workers"])
+        return DataLoader(
+            self.val_ds,
+            batch_size=self.hparams["batch_size"],
+            shuffle=False,
+            num_workers=self.hparams["num_workers"],
+        )

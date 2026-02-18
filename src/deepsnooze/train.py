@@ -1,7 +1,7 @@
 from lightning import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 
-from deepsnooze.data_module import SleepDataModule
+from deepsnooze.data_module import SleepDataModule, SleepyRatDataset
 from deepsnooze.models.ffnn import DeepSleepFFNN
 
 from deepsnooze.transforms.standardize_signal import StandardizeSignal
@@ -19,20 +19,17 @@ if __name__ == "__main__":
     # )
 
     datamodule = SleepDataModule(
-        processed_path="data/processed", 
-        batch_size=64, # Strongly suggest 64 for BatchNorm stability
-        transform=SpectrogramTransform(),
-        subset_size=None
+        processed_path="data/processed",
+        batch_size=64, 
+        val_subject="A1",
+        transform=StandardizeSignal()
     )
-    
+
     datamodule.setup(stage="fit")
 
-
-    original_ds = datamodule.train_ds.dataset
-    all_labels = np.array(original_ds.labels)
-    train_indices = datamodule.train_ds.indices
-    
-    train_labels = all_labels[train_indices]
+    full_ds: SleepyRatDataset = datamodule.train_ds.dataset
+    all_labels = np.array(full_ds.labels)
+    train_labels = all_labels[datamodule.train_ds.indices]
     
 
     class_weights = compute_class_weight(

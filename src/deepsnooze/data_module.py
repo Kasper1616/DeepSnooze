@@ -49,6 +49,7 @@ class SleepDataModule(LightningDataModule):
         processed_path="data/processed",
         batch_size=16,
         val_subject="A1",
+        test_subject="D6",
         num_workers=0,
         transform=None,
     ):
@@ -59,10 +60,14 @@ class SleepDataModule(LightningDataModule):
     def setup(self, stage=None):
         full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
         val_subject = self.hparams["val_subject"]
-        train_indices = [i for i in range(len(full)) if full.subject_of(i) != val_subject]
+        test_subject = self.hparams["test_subject"]
+        exclude_subjects = {val_subject, test_subject}
+        train_indices = [i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects]
         val_indices = [i for i in range(len(full)) if full.subject_of(i) == val_subject]
+        test_indices = [i for i in range(len(full)) if full.subject_of(i) == test_subject]
         self.train_ds = Subset(full, train_indices)
         self.val_ds = Subset(full, val_indices)
+        self.test_ds = Subset(full, test_indices)
 
     def train_dataloader(self):
         return DataLoader(
@@ -75,6 +80,14 @@ class SleepDataModule(LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.val_ds,
+            batch_size=self.hparams["batch_size"],
+            shuffle=False,
+            num_workers=self.hparams["num_workers"],
+        )
+    
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_ds,
             batch_size=self.hparams["batch_size"],
             shuffle=False,
             num_workers=self.hparams["num_workers"],

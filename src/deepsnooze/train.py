@@ -5,8 +5,7 @@ from deepsnooze.data_module import SleepDataModule, SleepyRatDataset
 from deepsnooze.models.ffnn import DeepSleepFFNN
 from deepsnooze.models.cnn import SleepyCNN
 
-from deepsnooze.transforms.standardize_signal import StandardizeSignal
-from deepsnooze.transforms.spectrogram_tranform import SpectrogramTransform
+from deepsnooze.transforms import StandardizeSignal, SpectrogramTransform
 
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np

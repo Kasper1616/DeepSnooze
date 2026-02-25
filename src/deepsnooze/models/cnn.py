@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from lightning import LightningModule
 from torchmetrics.classification import MulticlassAccuracy
-from sklearn.metrics import classification_report
+from deepsnooze.metrics import custom_classification_report
 
 class SleepyCNN(LightningModule):
     def __init__(self, num_classes=3, lr=1e-3, label_weights=None):
@@ -54,8 +54,7 @@ class SleepyCNN(LightningModule):
         logits = self(x)
         loss = self.criterion(logits, y)
 
-        preds = torch.argmax(logits, dim=1)
-        self.validation_step_outputs.append({"preds": preds, "targets": y})
+        self.validation_step_outputs.append({"logits": logits, "targets": y})
 
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", self.val_acc(logits, y), prog_bar=True)
@@ -64,10 +63,11 @@ class SleepyCNN(LightningModule):
         if not self.validation_step_outputs:
             return
 
-        all_preds = torch.cat([x["preds"] for x in self.validation_step_outputs]).cpu().numpy()
+        all_logits = torch.cat([x["logits"] for x in self.validation_step_outputs])
         all_targets = torch.cat([x["targets"] for x in self.validation_step_outputs]).cpu().numpy()
+        y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
 
-        print("\n" + classification_report(all_targets, all_preds, target_names=['Wake', 'NREM', 'REM'], zero_division=0))
+        print("\n" + custom_classification_report(all_targets, y_prob, target_names=['Wake', 'NREM', 'REM'], n_bins=10))
 
         self.validation_step_outputs.clear()
 

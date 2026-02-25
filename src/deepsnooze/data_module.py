@@ -49,7 +49,7 @@ class SleepDataModule(LightningDataModule):
         processed_path="data/processed",
         batch_size=16,
         val_subject="A1",
-        test_subject="A2",
+        test_subject="D6",
         num_workers=0,
         transform=None,
     ):
@@ -61,7 +61,8 @@ class SleepDataModule(LightningDataModule):
         full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
         val_subject = self.hparams["val_subject"]
         test_subject = self.hparams["test_subject"]
-        train_indices = [i for i in range(len(full)) if full.subject_of(i) != val_subject and full.subject_of(i) != test_subject]
+        exclude_subjects = {val_subject, test_subject}
+        train_indices = [i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects]
         val_indices = [i for i in range(len(full)) if full.subject_of(i) == val_subject]
         test_indices = [i for i in range(len(full)) if full.subject_of(i) == test_subject]
         self.train_ds = Subset(full, train_indices)

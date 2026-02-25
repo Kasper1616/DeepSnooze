@@ -51,6 +51,17 @@ class DeepSleepFFNN(LightningModule):
 
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", self.val_acc(logits, y), prog_bar=True)
+    
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        loss = self.criterion(logits, y)
+        
+        preds = torch.argmax(logits, dim=1)
+        self.validation_step_outputs.append({"preds": preds, "targets": y})
+
+        self.log("test_loss", loss, prog_bar=True)
+        self.log("test_acc", self.val_acc(logits, y), prog_bar=True)
 
 
     def on_validation_epoch_end(self):

@@ -84,7 +84,7 @@ class SleepDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.hparams["num_workers"],
         )
-    
+
     def test_dataloader(self):
         return DataLoader(
             self.test_ds,
@@ -92,4 +92,3 @@ class SleepDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.hparams["num_workers"],
         )
-    

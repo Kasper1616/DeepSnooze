@@ -1,2 +1,3 @@
 from deepsnooze.transforms.standardize_signal import StandardizeSignal
 from deepsnooze.transforms.spectrogram_tranform import SpectrogramTransform
+from deepsnooze.transforms.SpecAugment import SpecAugment

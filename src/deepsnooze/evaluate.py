@@ -11,18 +11,27 @@ torch.serialization.add_safe_globals([StandardizeSignal, SpectrogramTransform])
 
 
 if __name__ == "__main__":
+    # datamodule = SleepDataModule(
+    #     processed_path="data/processed",
+    #     batch_size=128,
+    #     val_subject="A1",
+    #     test_subject="D6",
+    #     transform=StandardizeSignal(),
+    # )
+
     datamodule = SleepDataModule(
         processed_path="data/processed",
-        batch_size=64,
-        val_subject="A1",
-        test_subject="D6",
-        transform=StandardizeSignal(),
+        batch_size=128,
+        val_subject="B4",
+        test_subject="C1",
+        eval_transform=SpectrogramTransform(),
+        num_workers=4,
     )
 
     # 1. Load the Trained Model
     # We load it onto the GPU if available
     # model = DeepSleepFFNN.load_from_checkpoint("models/latest.ckpt")
-    model = SleepyCNN.load_from_checkpoint("models/latest.ckpt",)
+    model = SleepyCNN.load_from_checkpoint("models/epoch=4-step=16875.ckpt", weights_only=False)
 
     # 2. Run Test Set Evaluation
     trainer = Trainer(logger=False)

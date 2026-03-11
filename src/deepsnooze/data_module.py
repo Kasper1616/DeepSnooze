@@ -4,6 +4,32 @@ import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, Subset
 
+class TransformSubset(Dataset):
+    """A simple wrapper to apply different transforms to PyTorch Subsets."""
+    def __init__(self, subset, transform=None):
+        self.subset = subset
+        self.transform = transform
+
+    def __getitem__(self, idx):
+        x, y = self.subset[idx]
+        if self.transform:
+            x = self.transform(x)
+        return x, y
+
+    def __len__(self):
+        return len(self.subset)
+    
+    @property
+    def dataset(self):
+        """Exposes the original dataset so train.py can access it."""
+        return self.subset.dataset
+    
+    @property
+    def indices(self):
+        """Exposes the subset indices so train.py can slice labels."""
+        return self.subset.indices
+
+
 class SleepyRatDataset(Dataset):
     def __init__(self, processed_path="data/processed", transform=None):
         files = sorted(Path(processed_path).glob("*.pt"))
@@ -51,23 +77,30 @@ class SleepDataModule(LightningDataModule):
         val_subject="A1",
         test_subject="D6",
         num_workers=0,
-        transform=None,
+        train_transform=None,  # Split into train and eval transforms
+        eval_transform=None,
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.transform = transform
+        self.train_transform = train_transform
+        self.eval_transform = eval_transform
 
     def setup(self, stage=None):
-        full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
+        # 1. Base dataset has NO transforms
+        full = SleepyRatDataset(self.hparams["processed_path"], transform=None)
+        
         val_subject = self.hparams["val_subject"]
         test_subject = self.hparams["test_subject"]
         exclude_subjects = {val_subject, test_subject}
+        
         train_indices = [i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects]
         val_indices = [i for i in range(len(full)) if full.subject_of(i) == val_subject]
         test_indices = [i for i in range(len(full)) if full.subject_of(i) == test_subject]
-        self.train_ds = Subset(full, train_indices)
-        self.val_ds = Subset(full, val_indices)
-        self.test_ds = Subset(full, test_indices)
+        
+        # 2. Wrap the Subsets with their respective transforms
+        self.train_ds = TransformSubset(Subset(full, train_indices), transform=self.train_transform)
+        self.val_ds = TransformSubset(Subset(full, val_indices), transform=self.eval_transform)
+        self.test_ds = TransformSubset(Subset(full, test_indices), transform=self.eval_transform)
 
     def train_dataloader(self):
         return DataLoader(
@@ -84,6 +117,7 @@ class SleepDataModule(LightningDataModule):
             batch_size=self.hparams["batch_size"],
             shuffle=False,
             num_workers=self.hparams["num_workers"],
+            persistent_workers=True if self.hparams["num_workers"] > 0 else False,
         )
 
     def test_dataloader(self):

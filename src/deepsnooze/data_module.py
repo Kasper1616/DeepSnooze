@@ -4,13 +4,13 @@ import torch
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader, Dataset, Subset
 
+
 class SleepyRatDataset(Dataset):
     def __init__(self, processed_path="data/processed", transform=None):
         files = sorted(Path(processed_path).glob("*.pt"))
         self.subjects = [f.stem for f in files]
         self.cache = [
-            torch.load(f, map_location="cpu", weights_only=True)
-            for f in files
+            torch.load(f, map_location="cpu", weights_only=True) for f in files
         ]
 
         self.index_map = [
@@ -27,7 +27,7 @@ class SleepyRatDataset(Dataset):
     @property
     def labels(self):
         return [
-            int(self.cache[file_idx]["y"][sample_idx]) # Use int() to extract the value
+            int(self.cache[file_idx]["y"][sample_idx])  # Use int() to extract the value
             for file_idx, sample_idx in self.index_map
         ]
 
@@ -50,7 +50,7 @@ class SleepDataModule(LightningDataModule):
         batch_size=16,
         val_subject="A1",
         test_subject="D6",
-        num_workers=0,
+        num_workers=7,
         transform=None,
     ):
         super().__init__()
@@ -58,13 +58,19 @@ class SleepDataModule(LightningDataModule):
         self.transform = transform
 
     def setup(self, stage=None):
-        full = SleepyRatDataset(self.hparams["processed_path"], transform=self.transform)
+        full = SleepyRatDataset(
+            self.hparams["processed_path"], transform=self.transform
+        )
         val_subject = self.hparams["val_subject"]
         test_subject = self.hparams["test_subject"]
         exclude_subjects = {val_subject, test_subject}
-        train_indices = [i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects]
+        train_indices = [
+            i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects
+        ]
         val_indices = [i for i in range(len(full)) if full.subject_of(i) == val_subject]
-        test_indices = [i for i in range(len(full)) if full.subject_of(i) == test_subject]
+        test_indices = [
+            i for i in range(len(full)) if full.subject_of(i) == test_subject
+        ]
         self.train_ds = Subset(full, train_indices)
         self.val_ds = Subset(full, val_indices)
         self.test_ds = Subset(full, test_indices)
@@ -75,6 +81,7 @@ class SleepDataModule(LightningDataModule):
             batch_size=self.hparams["batch_size"],
             shuffle=True,
             num_workers=self.hparams["num_workers"],
+            persistent_workers=True,
         )
 
     def val_dataloader(self):
@@ -83,6 +90,7 @@ class SleepDataModule(LightningDataModule):
             batch_size=self.hparams["batch_size"],
             shuffle=False,
             num_workers=self.hparams["num_workers"],
+            persistent_workers=True,
         )
 
     def test_dataloader(self):

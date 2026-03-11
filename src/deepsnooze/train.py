@@ -6,19 +6,18 @@ from deepsnooze.models.ffnn import DeepSleepFFNN
 from deepsnooze.models.cnn import SleepyCNN
 
 from deepsnooze.transforms import StandardizeSignal, SpectrogramTransform
-from deepsnooze.lora import apply_lora
+from deepsnooze.models.lora import apply_lora
 
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 import torch
 
 
-def train(model="cnn", max_epochs=100, batch_size=32, lr=1e-3, lora=False):
+def train(model="cnn", max_epochs=50, batch_size=32, lr=1e-3, lora=False):
     datamodule = SleepDataModule(
         processed_path="data/processed",
         batch_size=batch_size,
         val_subject="A1",
-        test_subject="C2",
         transform=SpectrogramTransform(),
     )
 
@@ -76,4 +75,5 @@ if __name__ == "__main__":
     parser.add_argument("--lora", action="store_true", help="Use LoRA for fine-tuning.")
 
     args = parser.parse_args()
+    print(f"Training with LoRA: {args.lora}")
     train(lora=args.lora)

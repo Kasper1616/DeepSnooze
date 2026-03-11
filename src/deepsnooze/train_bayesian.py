@@ -29,13 +29,13 @@ def make_pyro_model(net):
 
 
 def train_vi_bayesian(
-    model_type="cnn", max_epochs=100, batch_size=32, lr=1e-3, rank=1, alpha=10
+    model_type="cnn", max_epochs=100, batch_size=32, lr=1e-3, rank=1, alpha=10, device="cuda"
 ):
     datamodule = SleepDataModule(
         processed_path="data/processed",
         batch_size=batch_size,
         val_subject="A1",
-        test_subject="C2",
+        test_subject="D6",
         transform=SpectrogramTransform(),
     )
     datamodule.setup(stage="fit")
@@ -61,7 +61,7 @@ def train_vi_bayesian(
     base_model.load_state_dict(checkpoint["state_dict"], strict=False)
 
     apply_lora(base_model, rank=rank, alpha=alpha, use_bayesian=True)
-    print(base_model)
+    base_model.to(device)
 
     pyro.clear_param_store()
 
@@ -79,44 +79,52 @@ def train_vi_bayesian(
         epoch_loss = 0.0
         num_batches = 0
         for x, y in datamodule.train_dataloader():
+            x, y = x.to(device), y.to(device)
             loss = float(svi.step(x, y))
             epoch_loss += loss
             num_batches += 1
 
         avg_loss = epoch_loss / num_batches
 
-        # Validation: sample once from guide per batch
         base_model.eval()
         val_acc_metric.reset()
+        all_labels = []
+        all_probs = []
+
         with torch.no_grad():
             for x, y in datamodule.val_dataloader():
+                x, y = x.to(device), y.to(device)
                 guide_trace = pyro.poutine.trace(guide).get_trace(x, y)
                 with pyro.poutine.replay(trace=guide_trace):
                     logits = base_model(x)
                 val_acc_metric.update(logits, y)
-                custom_classification_report(
-                    y.cpu().numpy(),
-                    torch.softmax(logits, dim=1).cpu().numpy(),
-                    target_names=["Wake", "NREM", "REM"],
-                )
+                all_labels.append(y.cpu().numpy())
+                all_probs.append(torch.softmax(logits, dim=1).cpu().numpy())
 
         val_acc = val_acc_metric.compute().item()
-        print(
-            f"Epoch {epoch + 1}/{max_epochs} | ELBO loss: {avg_loss:.4f} | val_acc: {val_acc:.4f}"
+        all_labels = np.concatenate(all_labels)
+        all_probs = np.concatenate(all_probs)
+
+        report = custom_classification_report(
+            all_labels, all_probs, target_names=["Wake", "NREM", "REM"]
         )
+        print(f"Epoch {epoch + 1}/{max_epochs} | ELBO loss: {avg_loss:.4f} | val_acc: {val_acc:.4f}")
+        print(report)
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+        
+        # Log ELBO loss and val_acc to csv
+        with open(f"logs/{base_model.__class__.__name__}_bayesian_lora_k{rank}.csv", "a") as f:
+            if epoch == 0:
+                f.write("epoch,elbo_loss,val_acc\n")
+            f.write(f"{epoch + 1},{avg_loss:.4f},{val_acc:.4f}\n")
 
     pyro.get_param_store().save(
-        f"models/{base_model.__class__.__name__}_bayesian_lora.pt"
+        f"models/{base_model.__class__.__name__}_bayesian_lora_k{rank}.pt"
     )
     print(f"Training complete. Best val_acc: {best_val_acc:.4f}")
 
-def train_mcmc_bayesian(
-    model_type="cnn", max_epochs=100, batch_size=32, lr=1e-3, rank=1, alpha=10
-):
-    
 if __name__ == "__main__":
     import argparse
 
@@ -137,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", type=float, default=10)
 
     args = parser.parse_args()
-    train_bayesian(
+    train_vi_bayesian(
         model_type=args.model,
         max_epochs=args.max_epochs,
         batch_size=args.batch_size,

@@ -68,4 +68,12 @@ def train(model="cnn", max_epochs=100, batch_size=32, lr=1e-3, lora=False):
 
 
 if __name__ == "__main__":
-    train()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Train a sleep stage classification model."
+    )
+    parser.add_argument("--lora", action="store_true", help="Use LoRA for fine-tuning.")
+
+    args = parser.parse_args()
+    train(lora=args.lora)

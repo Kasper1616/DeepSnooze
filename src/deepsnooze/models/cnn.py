@@ -4,6 +4,7 @@ from lightning import LightningModule
 from torchmetrics.classification import MulticlassAccuracy
 from deepsnooze.metrics import custom_classification_report
 
+
 class SleepyCNN(LightningModule):
     def __init__(self, num_classes=3, lr=1e-3, label_weights=None):
         super().__init__()
@@ -16,24 +17,22 @@ class SleepyCNN(LightningModule):
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2, 2),
-
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(2, 2),
-
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(2, 2),
         )
 
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.LazyLinear(256),
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, num_classes)
+            nn.Linear(256, num_classes),
         )
 
         self.validation_step_outputs = []
@@ -75,12 +74,22 @@ class SleepyCNN(LightningModule):
             return
 
         all_logits = torch.cat([x["logits"] for x in self.validation_step_outputs])
-        all_targets = torch.cat([x["targets"] for x in self.validation_step_outputs]).cpu().numpy()
+        all_targets = (
+            torch.cat([x["targets"] for x in self.validation_step_outputs])
+            .cpu()
+            .numpy()
+        )
         y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
 
-        print("\n" + custom_classification_report(all_targets, y_prob, target_names=['Wake', 'NREM', 'REM'], n_bins=10))
+        print(
+            "\n"
+            + custom_classification_report(
+                all_targets, y_prob, target_names=["Wake", "NREM", "REM"], n_bins=10
+            )
+        )
 
         self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+

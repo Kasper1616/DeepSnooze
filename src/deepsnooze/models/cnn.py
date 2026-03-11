@@ -14,21 +14,26 @@ class SleepyCNN(LightningModule):
             nn.ReLU(),
             nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
+            nn.Dropout2d(0.1),
+
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
+            nn.Dropout2d(0.1),
+
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
+            nn.Dropout2d(0.1),
         )
 
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(1024, 256),
+            nn.Linear(1024, 256), 
             nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(256, num_classes),
@@ -40,4 +45,4 @@ class SleepyCNN(LightningModule):
         return x
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=1e-4)

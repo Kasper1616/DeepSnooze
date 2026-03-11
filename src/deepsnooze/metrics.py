@@ -18,7 +18,7 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
     y_pred = np.argmax(y_prob, axis=1)
 
     base = classification_report(
-        y_true, y_pred, target_names=target_names, zero_division=0
+        y_true, y_pred, labels=list(range(len(target_names))), target_names=target_names, zero_division=0
     )
 
     # --- NLL and LPD ---

@@ -20,6 +20,7 @@ dependencies = [
     "pyro-ppl>=1.9.1",
     "hydra-core>=1.3.0",
     "tensorboard>=2.20.0",
+    "torchvision>=0.25.0",
 ]
 
 [build-system]

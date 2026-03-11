@@ -15,7 +15,7 @@ class SleepDataModule(LightningDataModule):
         batch_size=16,
         val_subject="A1",
         test_subject="D6",
-        num_workers=7,
+        num_workers=0,
         transform=None,
     ):
         super().__init__()
@@ -63,7 +63,7 @@ class SleepDataModule(LightningDataModule):
             batch_size=self.hparams["batch_size"],
             shuffle=False,
             num_workers=self.hparams["num_workers"],
-            persistent_workers=True,
+            persistent_workers=True if self.hparams["num_workers"] > 0 else False,
         )
 
     def test_dataloader(self):

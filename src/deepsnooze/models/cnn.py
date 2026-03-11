@@ -14,21 +14,18 @@ class SleepyCNN(LightningModule):
             nn.ReLU(),
             nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
-            nn.Dropout2d(0.1),
 
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
-            nn.Dropout2d(0.1),
 
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
-            nn.Dropout2d(0.1),
         )
 
         self.fc = nn.Sequential(
@@ -45,4 +42,17 @@ class SleepyCNN(LightningModule):
         return x
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=1e-5)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, 
+        mode='min', 
+        factor=0.5,   # Be aggressive with the reduction
+        patience=4,    # Don't wait too long if it starts spiking
+    )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+            },
+        }

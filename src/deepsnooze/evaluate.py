@@ -21,7 +21,8 @@ if __name__ == "__main__":
 
     # 1. Load the Trained Model
     # We load it onto the GPU if available
-    model = DeepSleepFFNN.load_from_checkpoint("models/latest.ckpt")
+    # model = DeepSleepFFNN.load_from_checkpoint("models/latest.ckpt")
+    model = SleepyCNN.load_from_checkpoint("models/latest.ckpt",)
 
     # 2. Run Test Set Evaluation
     trainer = Trainer(logger=False)

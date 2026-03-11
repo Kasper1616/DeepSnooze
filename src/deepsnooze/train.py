@@ -22,7 +22,8 @@ if __name__ == "__main__":
         processed_path="data/processed",
         batch_size=64, 
         val_subject="A1",
-        transform=SpectrogramTransform()
+        transform=SpectrogramTransform(),
+        num_workers=10,
     )
 
     datamodule.setup(stage="fit")
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     print(f"Calculated Class Weights: {label_weights}")
 
     # model = DeepSleepFFNN(lr=1e-3, label_weights=label_weights)
-    model = SleepyCNN(lr=1e-3, label_weights=label_weights) # Adjust input size for spectrograms
+    model = SleepyCNN(lr=1e-4, label_weights=label_weights) # Adjust input size for spectrograms
 
     trainer = Trainer(
         max_epochs=20,
@@ -50,7 +51,7 @@ if __name__ == "__main__":
             ModelCheckpoint(
                 monitor="val_acc", mode="max", save_top_k=1, dirpath="models/"
             ),
-            EarlyStopping(monitor="val_loss", patience=5),
+            EarlyStopping(monitor="val_loss", patience=3),
         ],
     )
 

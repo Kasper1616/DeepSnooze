@@ -29,7 +29,7 @@ def make_pyro_model(net):
 
 
 def train_vi_bayesian(
-    model_type="cnn", max_epochs=100, batch_size=32, lr=1e-3, rank=1, alpha=10, device="cuda"
+    model_type="cnn", max_epochs=20, batch_size=32, lr=1e-3, rank=1, alpha=10, device="cuda"
 ):
     datamodule = SleepDataModule(
         processed_path="data/processed",
@@ -70,7 +70,7 @@ def train_vi_bayesian(
     optimizer = pyro.optim.Adam({"lr": lr})
     svi = SVI(pyro_model, guide, optimizer, loss=Trace_ELBO())
 
-    val_acc_metric = MulticlassAccuracy(num_classes=3)
+    val_acc_metric = MulticlassAccuracy(num_classes=3).to(device)
     best_val_acc = 0.0
 
     for epoch in range(max_epochs):

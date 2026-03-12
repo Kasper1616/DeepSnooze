@@ -50,6 +50,8 @@ class BayesianLoRALayer(torch.nn.Module):
             f"{self.name}_B",
             dist.Normal(0, self.std_dev).expand([self.rank, self.out_dim]).to_event(2),
         )
+        A = A.to(x.device)
+        B = B.to(x.device)
         x = self.alpha * (x @ A @ B)
         return x
 

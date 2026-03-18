@@ -47,7 +47,8 @@ class SleepyCNN(LightningModule):
         optimizer, 
         mode='min', 
         factor=0.5,   # Be aggressive with the reduction
-        patience=4,    # Don't wait too long if it starts spiking
+        patience=7,
+        min_lr=1e-6    # Don't wait too long if it starts spiking
     )
         return {
             "optimizer": optimizer,

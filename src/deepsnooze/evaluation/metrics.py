@@ -22,7 +22,6 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
     )
 
     # --- NLL and LPD ---
-    # Clip for numerical stability
     p_correct = y_prob[np.arange(len(y_true)), y_true].clip(1e-12, 1.0)
     nll = -np.mean(np.log(p_correct))
     lpd = np.mean(np.log(p_correct))

@@ -3,10 +3,6 @@ import torch.nn as nn
 import pyro
 import pyro.distributions as dist
 
-import torch.nn as nn
-from deepsnooze.transforms import SpectrogramTransform
-from deepsnooze.models.cnn import SleepyCNN
-
 
 class LoRALayer(torch.nn.Module):
     def __init__(self, in_dim, out_dim, rank, alpha):
@@ -94,9 +90,8 @@ def apply_lora(model, rank=4, alpha=16, use_bayesian=False):
 
 
 if __name__ == "__main__":
-    from functools import partial
     from deepsnooze.models.cnn import SleepyCNN
-    from deepsnooze.models.ffnn import DeepSleepFFNN
+    from deepsnooze.data.transforms import SpectrogramTransform
 
     model = SleepyCNN(num_classes=3)
 

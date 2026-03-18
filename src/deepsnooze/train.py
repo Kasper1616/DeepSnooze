@@ -1,79 +1,100 @@
-from lightning import Trainer
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from pathlib import Path
 
-from deepsnooze.data_module import SleepDataModule, SleepyRatDataset
-from deepsnooze.models.ffnn import DeepSleepFFNN
-from deepsnooze.models.cnn import SleepyCNN
-
-from deepsnooze.transforms import StandardizeSignal, SpectrogramTransform
-from deepsnooze.models.lora import apply_lora
-
-from sklearn.utils.class_weight import compute_class_weight
-import numpy as np
+import hydra
 import torch
+from lightning import Trainer
+from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
+from omegaconf import DictConfig
+
+from deepsnooze.data import SleepDataModule
+from deepsnooze.data.transforms import SpectrogramTransform, StandardizeSignal
+from deepsnooze.models.cnn import SleepyCNN
+from deepsnooze.models.ffnn import DeepSleepFFNN
+from deepsnooze.models.lora import apply_lora
+from deepsnooze.tasks import BayesianClassificationTask, StandardClassificationTask
+
+TRANSFORMS = {
+    "spectrogram": SpectrogramTransform,
+    "standardize": StandardizeSignal,
+}
+
+MODEL_CLASSES = {
+    "cnn": SleepyCNN,
+    "ffnn": DeepSleepFFNN,
+}
+
+TASK_CLASSES = {
+    "standard": StandardClassificationTask,
+    "bayesian": BayesianClassificationTask,
+}
 
 
-def train(model="cnn", max_epochs=50, batch_size=32, lr=1e-3, lora=False):
-    datamodule = SleepDataModule(
-        processed_path="data/processed",
-        batch_size=batch_size,
-        val_subject="A1",
-        transform=SpectrogramTransform(),
+def build_datamodule(cfg: DictConfig) -> SleepDataModule:
+    transform = TRANSFORMS[cfg.data.transform]()
+    dm = SleepDataModule(
+        processed_path=cfg.data.processed_path,
+        batch_size=cfg.training.batch_size,
+        val_subject=cfg.data.val_subject,
+        test_subject=cfg.data.test_subject,
+        transform=transform,
     )
+    dm.setup(stage="fit")
+    return dm
 
-    datamodule.setup(stage="fit")
 
-    full_ds: SleepyRatDataset = datamodule.train_ds.dataset
-    all_labels = np.array(full_ds.labels)
-    train_labels = all_labels[datamodule.train_ds.indices]
+def build_model(cfg: DictConfig):
+    model_cls = MODEL_CLASSES.get(cfg.model.name)
+    if model_cls is None:
+        raise ValueError(f"Unknown model: {cfg.model.name!r}")
+    return model_cls(num_classes=cfg.model.num_classes, lr=cfg.model.lr)
 
-    class_weights = compute_class_weight(
-        class_weight="balanced", classes=np.unique(train_labels), y=train_labels
-    )
 
-    label_weights = torch.tensor(class_weights, dtype=torch.float32)
-    print(f"Calculated Class Weights: {label_weights}")
+@hydra.main(config_path="../../configs", config_name="config", version_base=None)
+def main(cfg: DictConfig):
+    print(f"Experiment: {cfg.experiment_name}")
 
-    if lora:
-        print("Using LoRA for fine-tuning.")
+    datamodule = build_datamodule(cfg)
+    print(f"Class weights: {datamodule.class_weights}")
 
-        # load the pre-trained model
-        if model == "ffnn":
-            base_model = DeepSleepFFNN(lr=lr, label_weights=label_weights)
-        else:
-            base_model = SleepyCNN(lr=lr, label_weights=label_weights)
-        checkpoint = torch.load(f"models/{base_model.__class__.__name__}.ckpt")
+    model = build_model(cfg)
 
-        base_model.load_state_dict(checkpoint["state_dict"], strict=False)
+    if cfg.training.lora:
+        base_path = Path("models") / f"{cfg.model.name}_base.pt"
+        model.load_state_dict(torch.load(base_path, weights_only=True))
+        apply_lora(
+            model,
+            rank=cfg.training.rank,
+            alpha=cfg.training.alpha,
+            use_bayesian=(cfg.training.mode == "bayesian"),
+        )
 
-        # apply_lora
-        apply_lora(base_model, rank=1, alpha=10, use_bayesian=False)
+    task_cls = TASK_CLASSES.get(cfg.training.mode)
+    if task_cls is None:
+        raise ValueError(f"Unknown training mode: {cfg.training.mode!r}")
 
-        model = base_model
-
+    Path("models").mkdir(exist_ok=True)
+    if cfg.training.mode == "bayesian":
+        pyro_path = str(Path("models") / f"{cfg.experiment_name}_pyro.pt")
+        task = task_cls(model, num_classes=cfg.model.num_classes, lr=cfg.model.lr,
+                        label_weights=datamodule.class_weights, pyro_checkpoint_path=pyro_path)
+        callbacks = []
     else:
-        print("Training the full model from scratch.")
-        if model == "ffnn":
-            model = DeepSleepFFNN(lr=lr, label_weights=label_weights)
-        else:
-            model = SleepyCNN(lr=lr, label_weights=label_weights)
+        base_model_path = None if cfg.training.lora else str(Path("models") / f"{cfg.model.name}_base.pt")
+        task = task_cls(model, num_classes=cfg.model.num_classes, lr=cfg.model.lr,
+                        label_weights=datamodule.class_weights, base_model_path=base_model_path)
+        callbacks = [
+            ModelCheckpoint(monitor="val_acc", mode="max", dirpath="models",
+                            filename=cfg.experiment_name, save_weights_only=True),
+        ]
 
     trainer = Trainer(
-        max_epochs=max_epochs,
+        max_epochs=cfg.training.max_epochs,
+        callbacks=callbacks,
+        logger=TensorBoardLogger(save_dir="logs", name=cfg.experiment_name, version=""),
     )
-
-    trainer.fit(model, datamodule=datamodule)
-    trainer.save_checkpoint(f"models/{model.__class__.__name__}.ckpt")
+    trainer.fit(task, datamodule=datamodule)
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Train a sleep stage classification model."
-    )
-    parser.add_argument("--lora", action="store_true", help="Use LoRA for fine-tuning.")
-
-    args = parser.parse_args()
-    print(f"Training with LoRA: {args.lora}")
-    train(lora=args.lora)
+    main()

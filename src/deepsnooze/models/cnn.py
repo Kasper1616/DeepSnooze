@@ -1,29 +1,28 @@
 import torch
 import torch.nn as nn
 from lightning import LightningModule
-from torchmetrics.classification import MulticlassAccuracy
-from deepsnooze.metrics import custom_classification_report
 
 
 class SleepyCNN(LightningModule):
-    def __init__(self, num_classes=3, lr=1e-3, label_weights=None):
+    def __init__(self, num_classes=3, lr=1e-3):
         super().__init__()
         self.save_hyperparameters()
-        self.criterion = nn.CrossEntropyLoss(weight=label_weights)
-        self.val_acc = MulticlassAccuracy(num_classes=num_classes)
 
         self.features = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
+            nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
+            nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
+            nn.Dropout2d(0.3),
             nn.MaxPool2d(2, 2),
         )
 
@@ -31,65 +30,14 @@ class SleepyCNN(LightningModule):
             nn.Flatten(),
             nn.Linear(1024, 256),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(0.4),
             nn.Linear(256, num_classes),
         )
-
-        self.validation_step_outputs = []
 
     def forward(self, x):
         x = self.features(x)
         x = self.fc(x)
         return x
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        loss = self.criterion(self(x), y)
-        self.log("train_loss", loss, prog_bar=True)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = self.criterion(logits, y)
-
-        self.validation_step_outputs.append({"logits": logits, "targets": y})
-
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc", self.val_acc(logits, y), prog_bar=True)
-
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = self.criterion(logits, y)
-
-        preds = torch.argmax(logits, dim=1)
-        self.validation_step_outputs.append({"preds": preds, "targets": y})
-
-        self.log("test_loss", loss, prog_bar=True)
-        self.log("test_acc", self.val_acc(logits, y), prog_bar=True)
-
-    def on_validation_epoch_end(self):
-        if not self.validation_step_outputs:
-            return
-
-        all_logits = torch.cat([x["logits"] for x in self.validation_step_outputs])
-        all_targets = (
-            torch.cat([x["targets"] for x in self.validation_step_outputs])
-            .cpu()
-            .numpy()
-        )
-        y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
-
-        print(
-            "\n"
-            + custom_classification_report(
-                all_targets, y_prob, target_names=["Wake", "NREM", "REM"], n_bins=10
-            )
-        )
-
-        self.validation_step_outputs.clear()
-
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
-

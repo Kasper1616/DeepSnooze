@@ -1,46 +1,11 @@
-from pathlib import Path
-
+# src/deepsnooze/data/datamodule.py
+import numpy as np
 import torch
 from lightning import LightningDataModule
-from torch.utils.data import DataLoader, Dataset, Subset
+from sklearn.utils.class_weight import compute_class_weight
+from torch.utils.data import DataLoader, Subset
 
-
-class SleepyRatDataset(Dataset):
-    def __init__(self, processed_path="data/processed", transform=None):
-        files = sorted(Path(processed_path).glob("*.pt"))
-        self.subjects = [f.stem for f in files]
-        self.cache = [
-            torch.load(f, map_location="cpu", weights_only=True) for f in files
-        ]
-
-        self.index_map = [
-            (file_idx, i)
-            for file_idx, data_dict in enumerate(self.cache)
-            for i in range(len(data_dict["y"]))
-        ]
-        self.transform = transform
-
-    def subject_of(self, global_idx):
-        file_idx, _ = self.index_map[global_idx]
-        return self.subjects[file_idx]
-
-    @property
-    def labels(self):
-        return [
-            int(self.cache[file_idx]["y"][sample_idx])  # Use int() to extract the value
-            for file_idx, sample_idx in self.index_map
-        ]
-
-    def __len__(self):
-        return len(self.index_map)
-
-    def __getitem__(self, idx):
-        file_idx, sample_idx = self.index_map[idx]
-        d = self.cache[file_idx]
-        x, y = d["X"][sample_idx], d["y"][sample_idx]
-        if self.transform:
-            x = self.transform(x)
-        return x, y
+from deepsnooze.data.dataset import SleepyRatDataset
 
 
 class SleepDataModule(LightningDataModule):
@@ -54,7 +19,7 @@ class SleepDataModule(LightningDataModule):
         transform=None,
     ):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["transform"])
         self.transform = transform
 
     def setup(self, stage=None):
@@ -74,6 +39,14 @@ class SleepDataModule(LightningDataModule):
         self.train_ds = Subset(full, train_indices)
         self.val_ds = Subset(full, val_indices)
         self.test_ds = Subset(full, test_indices)
+
+        train_labels = np.array(full.labels)[train_indices]
+        weights = compute_class_weight(
+            class_weight="balanced",
+            classes=np.unique(train_labels),
+            y=train_labels,
+        )
+        self.class_weights = torch.tensor(weights, dtype=torch.float32)
 
     def train_dataloader(self):
         return DataLoader(

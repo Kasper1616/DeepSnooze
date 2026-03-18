@@ -1,0 +1,4 @@
+processed_path: data/processed
+val_subject: A1
+test_subject: D6
+transform: spectrogram

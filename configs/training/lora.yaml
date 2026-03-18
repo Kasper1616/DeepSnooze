@@ -1,0 +1,7 @@
+name: lora
+mode: standard
+max_epochs: 50
+batch_size: 32
+lora: true
+rank: 1
+alpha: 10

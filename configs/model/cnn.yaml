@@ -1,0 +1,4 @@
+name: cnn
+_target_: deepsnooze.models.cnn.SleepyCNN
+num_classes: 3
+lr: 1e-3

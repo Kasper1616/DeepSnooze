@@ -210,7 +210,7 @@ __marimo__/
 #  Add any additional files or directories specific to your project that should be ignored by Git.
 .DS_Store
 .claude
-data/
+/data/
 lightning_logs/
 
 *.lock

@@ -1,0 +1,4 @@
+name: ffnn
+_target_: deepsnooze.models.ffnn.DeepSleepFFNN
+num_classes: 3
+lr: 1e-3

@@ -1,0 +1,14 @@
+defaults:
+  - model: cnn
+  - training: default
+  - data: default
+  - _self_
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: .
+  output_subdir: null
+
+experiment_name: ${model.name}_${training.name}_${now:%Y-%m-%d_%H-%M}

@@ -1,0 +1,5 @@
+processed_path: data/processed
+batch_size: 32
+val_subject: A1
+test_subject: D6
+num_workers: 7

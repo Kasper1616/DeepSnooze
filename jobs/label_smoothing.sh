@@ -16,8 +16,6 @@ bsub << EOF
 #BSUB -o ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_simple_%J.out
 #BSUB -e ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_simple_%J.err
 
-cd ~/Desktop/Deepsnooze
-source .venv/bin/activate
 uv run python -m deepsnooze.train model=cnn_simple training=label_smoothing wandb.group=${GROUP} "wandb.notes=${NOTES}"
 EOF
 
@@ -32,8 +30,6 @@ bsub << EOF
 #BSUB -o ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_medium_%J.out
 #BSUB -e ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_medium_%J.err
 
-cd ~/Desktop/Deepsnooze
-source .venv/bin/activate
 uv run python -m deepsnooze.train model=cnn training=label_smoothing wandb.group=${GROUP} "wandb.notes=${NOTES}"
 EOF
 
@@ -48,8 +44,6 @@ bsub << EOF
 #BSUB -o ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_deep_%J.out
 #BSUB -e ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_deep_%J.err
 
-cd ~/Desktop/Deepsnooze
-source .venv/bin/activate
 uv run python -m deepsnooze.train model=cnn_deep training=label_smoothing wandb.group=${GROUP} "wandb.notes=${NOTES}"
 EOF
 

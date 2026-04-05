@@ -10,6 +10,7 @@ class FocalLoss(nn.Module):
         self.weight = weight
 
     def forward(self, logits, targets):
-        ce = F.cross_entropy(logits, targets, weight=self.weight, reduction="none")
+        weight = self.weight.to(logits.device) if self.weight is not None else None
+        ce = F.cross_entropy(logits, targets, weight=weight, reduction="none")
         p_t = torch.exp(-ce)
         return ((1 - p_t) ** self.gamma * ce).mean()

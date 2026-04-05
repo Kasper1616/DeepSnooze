@@ -8,16 +8,22 @@ from lightning import LightningModule
 from torchmetrics.classification import MulticlassAccuracy
 
 from deepsnooze.evaluation.metrics import custom_classification_report
+from deepsnooze.losses import FocalLoss
 
 _TARGET_NAMES = ["Wake", "NREM", "REM"]
 
 
 class StandardClassificationTask(LightningModule):
-    def __init__(self, model: torch.nn.Module, num_classes: int, lr: float, label_weights=None, base_model_path=None):
+    def __init__(self, model: torch.nn.Module, num_classes: int, lr: float, label_weights=None,
+                 base_model_path=None, loss="ce", label_smoothing=0.0, focal_gamma=2.0):
         super().__init__()
         self.model = model
         self.lr = lr
-        self.criterion = torch.nn.CrossEntropyLoss(weight=label_weights)
+        if loss == "focal":
+            self.criterion = FocalLoss(gamma=focal_gamma, weight=label_weights)
+        else:
+            smoothing = label_smoothing if loss == "label_smoothing" else 0.0
+            self.criterion = torch.nn.CrossEntropyLoss(weight=label_weights, label_smoothing=smoothing)
         self.val_acc = MulticlassAccuracy(num_classes=num_classes)
         self._val_outputs = []
         self._base_model_path = base_model_path

@@ -84,7 +84,9 @@ def main(cfg: DictConfig):
     else:
         base_model_path = None if cfg.training.lora else str(Path("models") / f"{cfg.model.name}_base.pt")
         task = task_cls(model, num_classes=cfg.model.num_classes, lr=cfg.model.lr,
-                        label_weights=datamodule.class_weights, base_model_path=base_model_path)
+                        label_weights=datamodule.class_weights, base_model_path=base_model_path,
+                        loss=cfg.training.loss, label_smoothing=cfg.training.label_smoothing,
+                        focal_gamma=cfg.training.focal_gamma)
         callbacks = [
             ModelCheckpoint(monitor="val_acc", mode="max", dirpath="models",
                             filename=cfg.experiment_name, save_weights_only=True),
@@ -93,7 +95,8 @@ def main(cfg: DictConfig):
     trainer = Trainer(
         max_epochs=cfg.training.max_epochs,
         callbacks=callbacks,
-        logger=WandbLogger(project=cfg.wandb.project, name=cfg.experiment_name),
+        logger=WandbLogger(project=cfg.wandb.project, name=cfg.experiment_name,
+                           group=cfg.wandb.group, notes=cfg.wandb.notes),
     )
     trainer.fit(task, datamodule=datamodule)
 

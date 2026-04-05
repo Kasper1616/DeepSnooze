@@ -4,12 +4,12 @@ import hydra
 import torch
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig
 
 from deepsnooze.data import SleepDataModule
 from deepsnooze.data.transforms import SpectrogramTransform, StandardizeSignal
-from deepsnooze.models.cnn import SleepyCNN
+from deepsnooze.models.cnn import DeepCNN, SimpleCNN, SleepyCNN
 from deepsnooze.models.ffnn import DeepSleepFFNN
 from deepsnooze.models.lora import apply_lora
 from deepsnooze.tasks import BayesianClassificationTask, StandardClassificationTask
@@ -21,6 +21,8 @@ TRANSFORMS = {
 
 MODEL_CLASSES = {
     "cnn": SleepyCNN,
+    "cnn_simple": SimpleCNN,
+    "cnn_deep": DeepCNN,
     "ffnn": DeepSleepFFNN,
 }
 
@@ -91,7 +93,7 @@ def main(cfg: DictConfig):
     trainer = Trainer(
         max_epochs=cfg.training.max_epochs,
         callbacks=callbacks,
-        logger=TensorBoardLogger(save_dir="logs", name=cfg.experiment_name, version=""),
+        logger=WandbLogger(project=cfg.wandb.project, name=cfg.experiment_name),
     )
     trainer.fit(task, datamodule=datamodule)
 

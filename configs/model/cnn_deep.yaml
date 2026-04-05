@@ -1,0 +1,3 @@
+name: cnn_deep
+num_classes: 3
+lr: 1e-3

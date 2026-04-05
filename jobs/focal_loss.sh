@@ -16,7 +16,8 @@ bsub << EOF
 #BSUB -o ${GROUP}_simple.out
 #BSUB -e ${GROUP}_simple.err
 
-uv run python -m deepsnooze.train model=cnn_simple training=focal_loss wandb.group=${GROUP} "wandb.notes=${NOTES}"
+source ~/.bashrc
+uv run python -m deepsnooze.train model=cnn_simple training=focal_loss wandb.group=${GROUP} "wandb.notes='${NOTES}'"
 EOF
 
 bsub << EOF
@@ -30,7 +31,8 @@ bsub << EOF
 #BSUB -o ${GROUP}_medium.out
 #BSUB -e ${GROUP}_medium.err
 
-uv run python -m deepsnooze.train model=cnn training=focal_loss wandb.group=${GROUP} "wandb.notes=${NOTES}"
+source ~/.bashrc
+uv run python -m deepsnooze.train model=cnn training=focal_loss wandb.group=${GROUP} "wandb.notes='${NOTES}'"
 EOF
 
 bsub << EOF
@@ -44,7 +46,8 @@ bsub << EOF
 #BSUB -o ${GROUP}_deep.out
 #BSUB -e ${GROUP}_deep.err
 
-uv run python -m deepsnooze.train model=cnn_deep training=focal_loss wandb.group=${GROUP} "wandb.notes=${NOTES}"
+source ~/.bashrc
+uv run python -m deepsnooze.train model=cnn_deep training=focal_loss wandb.group=${GROUP} "wandb.notes='${NOTES}'"
 EOF
 
 echo "Submitted 3 focal loss jobs."

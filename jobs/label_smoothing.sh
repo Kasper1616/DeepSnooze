@@ -13,8 +13,8 @@ bsub << EOF
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -W 24:00
-#BSUB -o ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_simple_%J.out
-#BSUB -e ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_simple_%J.err
+#BSUB -o ${GROUP}_simple.out
+#BSUB -e ${GROUP}_simple.err
 
 uv run python -m deepsnooze.train model=cnn_simple training=label_smoothing wandb.group=${GROUP} "wandb.notes=${NOTES}"
 EOF
@@ -27,8 +27,8 @@ bsub << EOF
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -W 24:00
-#BSUB -o ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_medium_%J.out
-#BSUB -e ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_medium_%J.err
+#BSUB -o ${GROUP}_medium.out
+#BSUB -e ${GROUP}_medium.err
 
 uv run python -m deepsnooze.train model=cnn training=label_smoothing wandb.group=${GROUP} "wandb.notes=${NOTES}"
 EOF
@@ -41,8 +41,8 @@ bsub << EOF
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -W 24:00
-#BSUB -o ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_deep_%J.out
-#BSUB -e ~/Desktop/Deepsnooze/logs/lsf/${GROUP}_deep_%J.err
+#BSUB -o ${GROUP}_deep.out
+#BSUB -e ${GROUP}_deep.err
 
 uv run python -m deepsnooze.train model=cnn_deep training=label_smoothing wandb.group=${GROUP} "wandb.notes=${NOTES}"
 EOF

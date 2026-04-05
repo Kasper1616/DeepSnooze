@@ -5,3 +5,6 @@ batch_size: 256
 lora: true
 rank: 1
 alpha: 10
+loss: ce
+label_smoothing: 0.0
+focal_gamma: 2.0

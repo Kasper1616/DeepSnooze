@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, f1_score
 
 
 def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
@@ -13,7 +13,7 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
         n_bins:       number of bins for ECE computation
 
     Returns:
-        Formatted string report.
+        Tuple of (formatted string report, dict of scalar metrics).
     """
     y_pred = np.argmax(y_prob, axis=1)
 
@@ -45,6 +45,9 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
         ece += mask.sum() * abs(acc_bin - conf_bin)
     ece /= len(y_true)
 
+    # --- Per-class F1 ---
+    per_class_f1 = f1_score(y_true, y_pred, labels=list(range(len(target_names))), average=None, zero_division=0)
+
     calibration = (
         f"\n"
         f"{'NLL':>12}  {nll:8.4f}\n"
@@ -53,4 +56,11 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
         f"{'Brier':>12}  {brier:8.4f}\n"
     )
 
-    return str(base) + calibration
+    scalars = {
+        "val_nll": float(nll),
+        "val_ece": float(ece),
+        "val_brier": float(brier),
+        **{f"val_f1_{name.lower()}": float(f1) for name, f1 in zip(target_names, per_class_f1)},
+    }
+
+    return str(base) + calibration, scalars

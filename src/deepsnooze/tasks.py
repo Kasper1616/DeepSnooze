@@ -46,7 +46,9 @@ class StandardClassificationTask(LightningModule):
         all_logits = torch.cat([o["logits"] for o in self._val_outputs])
         all_targets = torch.cat([o["targets"] for o in self._val_outputs]).cpu().numpy()
         y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
-        print("\n" + custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES))
+        report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
+        print("\n" + report)
+        self.log_dict(scalars, on_epoch=True, prog_bar=False)
         self._val_outputs.clear()
 
     def on_train_end(self):
@@ -114,7 +116,9 @@ class BayesianClassificationTask(LightningModule):
         all_logits = torch.cat([o["logits"] for o in self._val_outputs])
         all_targets = torch.cat([o["targets"] for o in self._val_outputs]).cpu().numpy()
         y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
-        print("\n" + custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES))
+        report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
+        print("\n" + report)
+        self.log_dict(scalars, on_epoch=True, prog_bar=False)
         self._val_outputs.clear()
 
         if self._pyro_checkpoint_path:

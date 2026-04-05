@@ -1,7 +1,7 @@
 name: bayesian_lora
 mode: bayesian
 max_epochs: 100
-batch_size: 32
+batch_size: 256
 lora: true
 rank: 1
 alpha: 10

@@ -12,3 +12,6 @@ hydra:
   output_subdir: null
 
 experiment_name: ${model.name}_${training.name}_${now:%Y-%m-%d_%H-%M}
+
+wandb:
+  project: deepsnooze

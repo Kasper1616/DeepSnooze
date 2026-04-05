@@ -212,6 +212,10 @@ __marimo__/
 .claude
 /data/
 lightning_logs/
+logs/
+models/
+outputs/
+wandb/
 
 *.lock
 

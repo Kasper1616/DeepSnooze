@@ -8,10 +8,10 @@ NOTES="Label smoothing (alpha=0.1) with class weights. Reduces overconfidence on
 bsub << EOF
 #!/bin/bash
 #BSUB -J deepsnooze_${GROUP}_simple
-#BSUB -q gpuv100
+#BSUB -q gpua40
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -n 4
-#BSUB -R "rusage[mem=16GB]"
+#BSUB -n 8
+#BSUB -R "rusage[mem=8GB]"
 #BSUB -W 24:00
 #BSUB -o ${GROUP}_simple.out
 #BSUB -e ${GROUP}_simple.err
@@ -22,10 +22,10 @@ EOF
 bsub << EOF
 #!/bin/bash
 #BSUB -J deepsnooze_${GROUP}_medium
-#BSUB -q gpuv100
+#BSUB -q gpua40
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -n 4
-#BSUB -R "rusage[mem=16GB]"
+#BSUB -n 8
+#BSUB -R "rusage[mem=8GB]"
 #BSUB -W 24:00
 #BSUB -o ${GROUP}_medium.out
 #BSUB -e ${GROUP}_medium.err
@@ -36,10 +36,10 @@ EOF
 bsub << EOF
 #!/bin/bash
 #BSUB -J deepsnooze_${GROUP}_deep
-#BSUB -q gpuv100
+#BSUB -q gpua40
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -n 4
-#BSUB -R "rusage[mem=16GB]"
+#BSUB -n 8
+#BSUB -R "rusage[mem=8GB]"
 #BSUB -W 24:00
 #BSUB -o ${GROUP}_deep.out
 #BSUB -e ${GROUP}_deep.err

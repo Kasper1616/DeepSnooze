@@ -105,23 +105,29 @@ class BayesianClassificationTask(LightningModule):
         self.log("elbo_loss", elbo_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train_loss", ce_loss, on_step=False, on_epoch=True, prog_bar=True)
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, n_samples=30):
         x, y = batch
-        guide_trace = pyro.poutine.trace(self.guide).get_trace(x, y)
-        with pyro.poutine.replay(trace=guide_trace):
-            logits = self(x)
-        loss = self.criterion(logits, y)
-        self.val_acc(logits, y)
+        # Average softmax probabilities over multiple posterior samples
+        probs = []
+        for _ in range(n_samples):
+            guide_trace = pyro.poutine.trace(self.guide).get_trace(x, y)
+            with pyro.poutine.replay(trace=guide_trace):
+                logits = self(x)
+            probs.append(torch.softmax(logits, dim=1))
+        mean_probs = torch.stack(probs).mean(0)
+        # Reconstruct logits from mean probs for loss/acc compatibility
+        mean_logits = mean_probs.log()
+        loss = self.criterion(mean_logits, y)
+        self.val_acc(mean_logits, y)
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", self.val_acc, prog_bar=True)
-        self._val_outputs.append({"logits": logits.detach(), "targets": y})
+        self._val_outputs.append({"probs": mean_probs.detach(), "targets": y})
 
     def on_validation_epoch_end(self):
         if not self._val_outputs:
             return
-        all_logits = torch.cat([o["logits"] for o in self._val_outputs])
+        y_prob = torch.cat([o["probs"] for o in self._val_outputs]).cpu().numpy()
         all_targets = torch.cat([o["targets"] for o in self._val_outputs]).cpu().numpy()
-        y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
         report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
         print("\n" + report)
         self.log_dict(scalars, on_epoch=True, prog_bar=False)

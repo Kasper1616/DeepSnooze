@@ -2,10 +2,12 @@ from pathlib import Path
 
 import hydra
 import torch
+import wandb  # Added to properly close runs in the loop
+import numpy as np # Added to calculate mean/std of metrics
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from deepsnooze.data import SleepDataModule
 from deepsnooze.data.transforms import SpectrogramTransform, StandardizeSignal
@@ -52,15 +54,24 @@ def build_model(cfg: DictConfig):
     return model_cls(num_classes=cfg.model.num_classes, lr=cfg.model.lr)
 
 
-@hydra.main(config_path="../../configs", config_name="config", version_base=None)
-def main(cfg: DictConfig):
-    print(f"Experiment: {cfg.experiment_name}")
+def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
+     # 1. Rotate the Test and Validation subjects
+    test_subject = subjects[fold_idx]
+    # Pick the next subject in the list to act as the validation subject
+    val_subject = subjects[(fold_idx + 1) % len(subjects)]
+    
+    print(f"\n--- Starting Fold {fold_idx + 1}/{len(subjects)} ---")
+    print(f"Training on all subjects EXCEPT -> Val: {val_subject} | Test: {test_subject}")
+    
+    # Update the config for this specific fold
+    cfg.data.test_subject = test_subject
+    cfg.data.val_subject = val_subject
+    
+    # Create a unique name for this fold
+    fold_exp_name = f"{cfg.experiment_name}_test_{test_subject}"
 
     datamodule = build_datamodule(cfg)
-    print(f"Class weights: {datamodule.class_weights}")
-
     model = build_model(cfg)
-
     if cfg.training.lora:
         base_path = Path("models") / f"{cfg.model.name}_base.pt"
         model.load_state_dict(torch.load(base_path, weights_only=True))
@@ -77,7 +88,7 @@ def main(cfg: DictConfig):
 
     Path("models").mkdir(exist_ok=True)
     if cfg.training.mode == "bayesian":
-        pyro_path = str(Path("models") / f"{cfg.experiment_name}_pyro.pt")
+        pyro_path = str(Path("models") / f"{fold_exp_name}_pyro.pt")
         task = task_cls(model, num_classes=cfg.model.num_classes, lr=cfg.model.lr,
                         label_weights=datamodule.class_weights, pyro_checkpoint_path=pyro_path)
         callbacks = []
@@ -88,18 +99,78 @@ def main(cfg: DictConfig):
                         loss=cfg.training.loss, label_smoothing=cfg.training.label_smoothing,
                         focal_gamma=cfg.training.focal_gamma)
         callbacks = [
-            ModelCheckpoint(monitor="val_acc", mode="max", dirpath="models",
-                            filename=cfg.experiment_name, save_weights_only=True),
+            ModelCheckpoint(
+                monitor="val_acc", 
+                mode="max", 
+                dirpath="models",
+                filename=fold_exp_name, 
+                save_weights_only=True
+            ),
         ]
+
+    logger = WandbLogger(
+        project=cfg.wandb.project, 
+        name=fold_exp_name,
+        group=cfg.experiment_name, 
+        notes=cfg.wandb.notes
+    )
 
     trainer = Trainer(
         max_epochs=cfg.training.max_epochs,
         callbacks=callbacks,
-        logger=WandbLogger(project=cfg.wandb.project, name=cfg.experiment_name,
-                           group=cfg.wandb.group, notes=cfg.wandb.notes),
+        logger=logger,
+        enable_model_summary=(fold_idx == 0),
     )
+    
+    # 2. Fit the model (uses train and val sets)
     trainer.fit(task, datamodule=datamodule)
+    
+    # 3. Test the model on the held-out subject!
+    # Use ckpt_path="best" to load the weights from the highest val_acc
+    # Note: If Bayesian mode doesn't use ModelCheckpoint, set ckpt_path=None
+    ckpt = "best" if cfg.training.mode != "bayesian" else None
+    print(f"\n--- Evaluating Held-Out Test Subject: {test_subject} ---")
+    test_results = trainer.test(task, datamodule=datamodule, ckpt_path=ckpt)
+    
+    # 4. Extract the test metric (Ensure your Task logs "test_acc" in test_step)
+    # trainer.test returns a list of dictionaries (one per dataloader)
+    test_acc = test_results[0].get("test_acc", 0.0)
+    
+    wandb.finish()
+    return test_acc
 
+
+@hydra.main(config_path="../../configs", config_name="config", version_base=None)
+def main(cfg: DictConfig):
+    print(f"Base Experiment Name: {cfg.experiment_name}")
+
+    if "cv_subjects" in cfg.data and cfg.data.cv_subjects:
+        subjects = cfg.data.cv_subjects
+        print(f"Running Cross-Validation over {len(subjects)} subjects.")
+        
+        fold_metrics = []
+        # Pass the whole list to the function so it can rotate val and test
+        for i in range(len(subjects)):
+            OmegaConf.set_struct(cfg, False)
+            fold_acc = run_fold(cfg, fold_idx=i, subjects=subjects)
+            fold_metrics.append(fold_acc)
+            OmegaConf.set_struct(cfg, True)
+            
+            print(f"--- Test Accuracy for Held-out Subject {subjects[i]}: {fold_acc:.4f} ---")
+            
+        mean_acc = np.mean(fold_metrics)
+        std_acc = np.std(fold_metrics)
+        print("\n=========================================")
+        print(f"Cross-Validation Complete!")
+        print(f"Average Generalization (Test) Accuracy: {mean_acc:.4f} ± {std_acc:.4f}")
+        print("=========================================")
+        
+    else:
+        # Fallback to single run using the subjects defined in the base config
+        print(f"Running single split -> Val: {cfg.data.val_subject} | Test: {cfg.data.test_subject}")
+        # Create a dummy list to satisfy the function arguments
+        dummy_subjects = [cfg.data.test_subject, cfg.data.val_subject]
+        run_fold(cfg, fold_idx=0, subjects=dummy_subjects)
 
 if __name__ == "__main__":
     main()

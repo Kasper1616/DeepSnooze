@@ -68,7 +68,7 @@ class DeepCNN(nn.Module):
         )
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(512, 256),
+            nn.Linear(2048, 256),
             nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(256, num_classes),

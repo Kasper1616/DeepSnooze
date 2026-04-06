@@ -2,4 +2,4 @@ processed_path: data/processed
 val_subject: A1
 test_subject: D6
 transform: spectrogram
-cv_subjects: null
+cv_subjects: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3']

@@ -26,6 +26,8 @@ class StandardClassificationTask(LightningModule):
             self.criterion = torch.nn.CrossEntropyLoss(weight=label_weights, label_smoothing=smoothing)
         self.val_acc = MulticlassAccuracy(num_classes=num_classes)
         self._val_outputs = []
+        self.test_acc = self.val_acc.clone()
+        self._test_outputs = []
         self._base_model_path = base_model_path
 
     def forward(self, x):
@@ -45,6 +47,18 @@ class StandardClassificationTask(LightningModule):
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", self.val_acc, prog_bar=True)
         self._val_outputs.append({"logits": logits.detach(), "targets": y})
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        loss = self.criterion(logits, y)
+    
+        self.test_acc(logits, y)
+        
+        self.log("test_loss", loss, prog_bar=True)
+        self.log("test_acc", self.test_acc, prog_bar=True)
+        
+        self._test_outputs.append({"logits": logits.detach(), "targets": y})
 
     def on_validation_epoch_end(self):
         if not self._val_outputs:

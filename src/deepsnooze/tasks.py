@@ -80,13 +80,12 @@ class BayesianClassificationTask(LightningModule):
         pyro.clear_param_store()
         self.pyro_model = self._make_pyro_model()
         self.guide = AutoNormal(self.pyro_model)
-        self.svi = SVI(self.pyro_model, self.guide, pyro.optim.Adam({"lr": lr}), loss=Trace_ELBO())
+        self.svi = SVI(self.pyro_model, self.guide, pyro.optim.Adam({"lr": lr * 0.1}), loss=Trace_ELBO())
 
     def _make_pyro_model(self):
         net = self.model
 
         def model(x, y=None):
-            pyro.module("net", net)
             logits = net(x)
             with pyro.plate("data", x.shape[0]):
                 pyro.sample("obs", dist.Categorical(logits=logits), obs=y)

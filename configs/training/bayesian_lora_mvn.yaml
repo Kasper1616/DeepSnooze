@@ -1,4 +1,4 @@
-name: bayesian_lora
+name: bayesian_lora_mvn
 mode: bayesian
 max_epochs: 100
 batch_size: 256
@@ -9,4 +9,4 @@ loss: ce
 label_smoothing: 0.0
 focal_gamma: 2.0
 svi_lr: 1e-4
-variational_family: normal
+variational_family: multivariate

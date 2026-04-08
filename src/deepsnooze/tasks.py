@@ -3,7 +3,7 @@ import pyro
 import pyro.distributions as dist
 import pyro.optim
 from pyro.infer import SVI, Trace_ELBO
-from pyro.infer.autoguide import AutoNormal
+from pyro.infer.autoguide import AutoNormal, AutoMultivariateNormal
 from lightning import LightningModule
 from torchmetrics.classification import MulticlassAccuracy
 
@@ -66,7 +66,7 @@ class StandardClassificationTask(LightningModule):
 
 
 class BayesianClassificationTask(LightningModule):
-    def __init__(self, model: torch.nn.Module, num_classes: int, lr: float, label_weights=None, pyro_checkpoint_path=None, svi_lr=1e-4):
+    def __init__(self, model: torch.nn.Module, num_classes: int, lr: float, label_weights=None, pyro_checkpoint_path=None, svi_lr=1e-4, variational_family="normal"):
         super().__init__()
         self.model = model
         self.lr = lr
@@ -79,7 +79,8 @@ class BayesianClassificationTask(LightningModule):
 
         pyro.clear_param_store()
         self.pyro_model = self._make_pyro_model()
-        self.guide = AutoNormal(self.pyro_model)
+        guide_cls = AutoMultivariateNormal if variational_family == "multivariate" else AutoNormal
+        self.guide = guide_cls(self.pyro_model)
         self.svi = SVI(self.pyro_model, self.guide, pyro.optim.Adam({"lr": svi_lr}), loss=Trace_ELBO())
 
     def _make_pyro_model(self):

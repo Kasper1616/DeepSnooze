@@ -79,7 +79,8 @@ def main(cfg: DictConfig):
     if cfg.training.mode == "bayesian":
         pyro_path = str(Path("models") / f"{cfg.experiment_name}_pyro.pt")
         task = task_cls(model, num_classes=cfg.model.num_classes, lr=cfg.model.lr,
-                        label_weights=datamodule.class_weights, pyro_checkpoint_path=pyro_path)
+                        label_weights=datamodule.class_weights, pyro_checkpoint_path=pyro_path,
+                        svi_lr=cfg.training.svi_lr)
         callbacks = []
     else:
         base_model_path = None if cfg.training.lora else str(Path("models") / f"{cfg.model.name}_base.pt")

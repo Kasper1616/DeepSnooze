@@ -66,7 +66,7 @@ class StandardClassificationTask(LightningModule):
 
 
 class BayesianClassificationTask(LightningModule):
-    def __init__(self, model: torch.nn.Module, num_classes: int, lr: float, label_weights=None, pyro_checkpoint_path=None):
+    def __init__(self, model: torch.nn.Module, num_classes: int, lr: float, label_weights=None, pyro_checkpoint_path=None, svi_lr=1e-4):
         super().__init__()
         self.model = model
         self.lr = lr
@@ -80,7 +80,7 @@ class BayesianClassificationTask(LightningModule):
         pyro.clear_param_store()
         self.pyro_model = self._make_pyro_model()
         self.guide = AutoNormal(self.pyro_model)
-        self.svi = SVI(self.pyro_model, self.guide, pyro.optim.Adam({"lr": lr * 0.1}), loss=Trace_ELBO())
+        self.svi = SVI(self.pyro_model, self.guide, pyro.optim.Adam({"lr": svi_lr}), loss=Trace_ELBO())
 
     def _make_pyro_model(self):
         net = self.model

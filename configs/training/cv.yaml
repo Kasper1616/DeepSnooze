@@ -1,6 +1,6 @@
 name: standard
 mode: standard
-max_epochs: 1
+max_epochs: 100
 batch_size: 256
 lora: false
 rank: 1

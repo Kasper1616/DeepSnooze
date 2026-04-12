@@ -61,15 +61,10 @@ class StandardClassificationTask(LightningModule):
         self._test_outputs.append({"logits": logits.detach(), "targets": y})
 
     def on_validation_epoch_end(self):
-        if not self._val_outputs:
-            return
-        all_logits = torch.cat([o["logits"] for o in self._val_outputs])
-        all_targets = torch.cat([o["targets"] for o in self._val_outputs]).cpu().numpy()
-        y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
-        report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
-        print("\n" + report)
-        self.log_dict(scalars, on_epoch=True, prog_bar=False)
-        self._val_outputs.clear()
+        self._shared_eval_epoch_end(self._val_outputs, prefix="val")
+    
+    def on_test_epoch_end(self):
+        self._shared_eval_epoch_end(self._test_outputs, prefix="test")
 
     def on_train_end(self):
         if self._base_model_path:
@@ -77,6 +72,17 @@ class StandardClassificationTask(LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.lr)
+    
+    def _shared_eval_epoch_end(self, outputs, prefix):
+        if not outputs:
+            return
+        all_logits = torch.cat([o["logits"] for o in outputs])
+        all_targets = torch.cat([o["targets"] for o in outputs]).cpu().numpy()
+        y_prob = torch.softmax(all_logits, dim=1).cpu().numpy()
+        report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
+        print(f"\n--- {prefix.upper()} Classification Report ---\n{report}")
+        self.log_dict({f"{prefix}_{k}": v for k, v in scalars.items()}, on_epoch=True, prog_bar=False)
+        outputs.clear()
 
 
 class BayesianClassificationTask(LightningModule):

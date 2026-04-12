@@ -4,6 +4,7 @@ import hydra
 import torch
 import wandb  # Added to properly close runs in the loop
 import numpy as np # Added to calculate mean/std of metrics
+import gc
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
@@ -16,7 +17,10 @@ from deepsnooze.models.ffnn import DeepSleepFFNN
 from deepsnooze.models.lora import apply_lora
 from deepsnooze.tasks import BayesianClassificationTask, StandardClassificationTask
 
+
+
 TRANSFORMS = {
+    "none": None,
     "spectrogram": SpectrogramTransform,
     "standardize": StandardizeSignal,
 }
@@ -35,7 +39,10 @@ TASK_CLASSES = {
 
 
 def build_datamodule(cfg: DictConfig) -> SleepDataModule:
-    transform = TRANSFORMS[cfg.data.transform]()
+    transform_cls = TRANSFORMS.get(cfg.data.transform)
+    
+    transform = transform_cls() if transform_cls is not None else None
+
     dm = SleepDataModule(
         processed_path=cfg.data.processed_path,
         batch_size=cfg.training.batch_size,
@@ -68,7 +75,7 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     cfg.data.val_subject = val_subject
     
     # Create a unique name for this fold
-    fold_exp_name = f"{cfg.experiment_name}_test_{test_subject}"
+    fold_exp_name = f"{cfg.experiment_name}_val_{val_subject}_test_{test_subject}"
 
     datamodule = build_datamodule(cfg)
     model = build_model(cfg)
@@ -137,6 +144,13 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     test_acc = test_results[0].get("test_acc", 0.0)
     
     wandb.finish()
+
+    # Clean up to free memory before the next fold
+    del trainer, model, datamodule, task
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    
     return test_acc
 
 

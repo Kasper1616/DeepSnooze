@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import hydra
+import pyro
 import torch
 import wandb  # Added to properly close runs in the loop
 import numpy as np # Added to calculate mean/std of metrics
@@ -80,8 +81,16 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     datamodule = build_datamodule(cfg)
     model = build_model(cfg)
     if cfg.training.lora:
-        base_path = Path("models") / f"{cfg.model.name}_base.pt"
-        model.load_state_dict(torch.load(base_path, weights_only=True))
+        base_experiment = cfg.training.get("base_experiment")
+        if not base_experiment:
+            raise ValueError("training.base_experiment must be set when lora=true")
+        base_ckpt_path = Path("models") / f"{base_experiment}_val_{val_subject}_test_{test_subject}.ckpt"
+        if not base_ckpt_path.exists():
+            raise FileNotFoundError(f"Base checkpoint not found: {base_ckpt_path}")
+        ckpt = torch.load(base_ckpt_path, weights_only=True, map_location="cpu")
+        state_dict = ckpt.get("state_dict", ckpt)
+        model_state = {k[len("model."):]: v for k, v in state_dict.items() if k.startswith("model.")}
+        model.load_state_dict(model_state)
         apply_lora(
             model,
             rank=cfg.training.rank,
@@ -119,7 +128,7 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     logger = WandbLogger(
         project=cfg.wandb.project, 
         name=fold_exp_name,
-        group=cfg.experiment_name, 
+        group=cfg.wandb.group,
         notes=cfg.wandb.notes
     )
 
@@ -136,7 +145,11 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     # 3. Test the model on the held-out subject!
     # Use ckpt_path="best" to load the weights from the highest val_acc
     # Note: If Bayesian mode doesn't use ModelCheckpoint, set ckpt_path=None
-    ckpt = "best" if cfg.training.mode != "bayesian" else None
+    if cfg.training.mode == "bayesian":
+        pyro.get_param_store().load(pyro_path)
+        ckpt = None
+    else:
+        ckpt = "best"
     print(f"\n--- Evaluating Held-Out Test Subject: {test_subject} ---")
     test_results = trainer.test(task, datamodule=datamodule, ckpt_path=ckpt)
     

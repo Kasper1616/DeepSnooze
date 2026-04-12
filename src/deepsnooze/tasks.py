@@ -93,6 +93,8 @@ class BayesianClassificationTask(LightningModule):
         self.criterion = torch.nn.CrossEntropyLoss(weight=label_weights)
         self.val_acc = MulticlassAccuracy(num_classes=num_classes)
         self._val_outputs = []
+        self.test_acc = self.val_acc.clone()
+        self._test_outputs = []
         self._pyro_checkpoint_path = pyro_checkpoint_path
         self._best_val_acc = 0.0
         self.automatic_optimization = False
@@ -143,15 +145,24 @@ class BayesianClassificationTask(LightningModule):
         self.log("val_acc", self.val_acc, prog_bar=True)
         self._val_outputs.append({"probs": mean_probs.detach(), "targets": y})
 
+    def test_step(self, batch, batch_idx, n_samples=30):
+        x, y = batch
+        probs = []
+        for _ in range(n_samples):
+            guide_trace = pyro.poutine.trace(self.guide).get_trace(x, y)
+            with pyro.poutine.replay(trace=guide_trace):
+                logits = self(x)
+            probs.append(torch.softmax(logits, dim=1))
+        mean_probs = torch.stack(probs).mean(0)
+        mean_logits = mean_probs.log()
+        loss = self.criterion(mean_logits, y)
+        self.test_acc(mean_logits, y)
+        self.log("test_loss", loss, prog_bar=True)
+        self.log("test_acc", self.test_acc, prog_bar=True)
+        self._test_outputs.append({"probs": mean_probs.detach(), "targets": y})
+
     def on_validation_epoch_end(self):
-        if not self._val_outputs:
-            return
-        y_prob = torch.cat([o["probs"] for o in self._val_outputs]).cpu().numpy()
-        all_targets = torch.cat([o["targets"] for o in self._val_outputs]).cpu().numpy()
-        report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
-        print("\n" + report)
-        self.log_dict(scalars, on_epoch=True, prog_bar=False)
-        self._val_outputs.clear()
+        self._shared_eval_epoch_end(self._val_outputs, prefix="val")
 
         if self._pyro_checkpoint_path:
             val_acc = float(self.trainer.callback_metrics.get("val_acc", 0.0))
@@ -159,5 +170,18 @@ class BayesianClassificationTask(LightningModule):
                 self._best_val_acc = val_acc
                 pyro.get_param_store().save(self._pyro_checkpoint_path)
 
+    def on_test_epoch_end(self):
+        self._shared_eval_epoch_end(self._test_outputs, prefix="test")
+
     def configure_optimizers(self):
         return []  # Pyro handles optimization via SVI
+
+    def _shared_eval_epoch_end(self, outputs, prefix):
+        if not outputs:
+            return
+        y_prob = torch.cat([o["probs"] for o in outputs]).cpu().numpy()
+        all_targets = torch.cat([o["targets"] for o in outputs]).cpu().numpy()
+        report, scalars = custom_classification_report(all_targets, y_prob, target_names=_TARGET_NAMES)
+        print(f"\n--- {prefix.upper()} Classification Report ---\n{report}")
+        self.log_dict({f"{prefix}_{k}": v for k, v in scalars.items()}, on_epoch=True, prog_bar=False)
+        outputs.clear()

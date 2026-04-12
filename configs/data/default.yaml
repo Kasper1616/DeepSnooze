@@ -1,4 +1,5 @@
-processed_path: data/processed
+processed_path: data/spectrograms
 val_subject: A1
 test_subject: D6
-transform: spectrogram
+transform: none
+cv_subjects: null

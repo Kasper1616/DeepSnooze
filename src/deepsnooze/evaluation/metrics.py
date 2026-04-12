@@ -57,10 +57,10 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
     )
 
     scalars = {
-        "val_nll": float(nll),
-        "val_ece": float(ece),
-        "val_brier": float(brier),
-        **{f"val_f1_{name.lower()}": float(f1) for name, f1 in zip(target_names, per_class_f1)},
+        "nll": float(nll),
+        "ece": float(ece),
+        "brier": float(brier),
+        **{f"f1_{name.lower()}": float(f1) for name, f1 in zip(target_names, per_class_f1)},
     }
 
     return str(base) + calibration, scalars

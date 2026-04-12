@@ -41,13 +41,14 @@ class SleepyCNN(nn.Module):
             _conv_block(3, 32),
             _conv_block(32, 64),
             _conv_block(64, 128),
+            nn.AdaptiveAvgPool2d((2, 2)),
         )
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(1024, 256),
+            nn.Linear(512, 128),
             nn.ReLU(),
             nn.Dropout(0.4),
-            nn.Linear(256, num_classes),
+            nn.Linear(128, num_classes),
         )
 
     def forward(self, x):
@@ -65,10 +66,11 @@ class DeepCNN(nn.Module):
             _conv_block(32, 64),
             _conv_block(64, 128),
             _conv_block(128, 256),
+            nn.AdaptiveAvgPool2d((2, 2)),
         )
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(512, 256),
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Dropout(0.4),
             nn.Linear(256, num_classes),

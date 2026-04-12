@@ -6,7 +6,6 @@
 NOTES="LoRA CV on frozen cnn_standard base. Comparing ranks 1, 2, 4, 8."
 BASE_EXPERIMENT="cnn_standard_cv"
 MODEL="cnn"
-DIR="/zhome/96/e/167682/rml/DeepSnooze"
 
 for RANK in 1 2 4 8; do
 
@@ -20,9 +19,6 @@ bsub << EOF
 #BSUB -W 24:00
 #BSUB -o lora_cv_r${RANK}.out
 #BSUB -e lora_cv_r${RANK}.err
-
-source ~/.bashrc
-cd ${DIR}
 
 uv run python -m deepsnooze.train \
   model=${MODEL} \
@@ -52,9 +48,6 @@ bsub << EOF
 #BSUB -W 24:00
 #BSUB -o bayesian_lora_cv_r${RANK}.out
 #BSUB -e bayesian_lora_cv_r${RANK}.err
-
-source ~/.bashrc
-cd ${DIR}
 
 uv run python -m deepsnooze.train \
   model=${MODEL} \

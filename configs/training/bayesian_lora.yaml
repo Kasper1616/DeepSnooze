@@ -10,3 +10,4 @@ label_smoothing: 0.0
 focal_gamma: 2.0
 svi_lr: 1e-4
 variational_family: normal
+base_experiment: null

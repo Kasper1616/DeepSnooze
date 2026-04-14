@@ -17,8 +17,6 @@ bsub << EOF
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"
 #BSUB -W 24:00
-#BSUB -o lora_cv_r${RANK}.out
-#BSUB -e lora_cv_r${RANK}.err
 
 uv run python -m deepsnooze.train \
   model=${MODEL} \
@@ -46,8 +44,6 @@ bsub << EOF
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"
 #BSUB -W 24:00
-#BSUB -o bayesian_lora_cv_r${RANK}.out
-#BSUB -e bayesian_lora_cv_r${RANK}.err
 
 uv run python -m deepsnooze.train \
   model=${MODEL} \

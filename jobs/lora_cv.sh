@@ -12,7 +12,7 @@ for RANK in 1 2 4; do
 bsub << EOF
 #!/bin/bash
 #BSUB -J lora_cv_r${RANK}
-#BSUB -q gpuv100
+#BSUB -q gpua40
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"
@@ -43,7 +43,7 @@ for RANK in 1 2 4; do
 bsub << EOF
 #!/bin/bash
 #BSUB -J bayesian_lora_cv_r${RANK}
-#BSUB -q gpuv100
+#BSUB -q gpua40
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"

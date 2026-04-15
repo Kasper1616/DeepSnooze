@@ -90,7 +90,7 @@ class BayesianClassificationTask(LightningModule):
         super().__init__()
         self.model = model
         self.lr = lr
-        self.criterion = torch.nn.CrossEntropyLoss(weight=label_weights)
+        self.criterion = torch.nn.NLLLoss(weight=label_weights)
         self.val_acc = MulticlassAccuracy(num_classes=num_classes)
         self._val_outputs = []
         self.test_acc = self.val_acc.clone()
@@ -137,10 +137,8 @@ class BayesianClassificationTask(LightningModule):
                 logits = self(x)
             probs.append(torch.softmax(logits, dim=1))
         mean_probs = torch.stack(probs).mean(0)
-        # Reconstruct logits from mean probs for loss/acc compatibility
-        mean_logits = mean_probs.log()
-        loss = self.criterion(mean_logits, y)
-        self.val_acc(mean_logits, y)
+        loss = self.criterion(mean_probs.log(), y)
+        self.val_acc(mean_probs, y)
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", self.val_acc, prog_bar=True)
         self._val_outputs.append({"probs": mean_probs.detach(), "targets": y})
@@ -154,9 +152,8 @@ class BayesianClassificationTask(LightningModule):
                 logits = self(x)
             probs.append(torch.softmax(logits, dim=1))
         mean_probs = torch.stack(probs).mean(0)
-        mean_logits = mean_probs.log()
-        loss = self.criterion(mean_logits, y)
-        self.test_acc(mean_logits, y)
+        loss = self.criterion(mean_probs.log(), y)
+        self.test_acc(mean_probs, y)
         self.log("test_loss", loss, prog_bar=True)
         self.log("test_acc", self.test_acc, prog_bar=True)
         self._test_outputs.append({"probs": mean_probs.detach(), "targets": y})

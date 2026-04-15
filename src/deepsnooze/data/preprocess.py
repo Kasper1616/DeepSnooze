@@ -14,12 +14,10 @@ EPOCH_DURATION = 4.0
 TARGET_LEN = int(TARGET_SFREQ * EPOCH_DURATION)
 
 LABEL_MAP = {
-    "w": 0,
-    "1": 0,  # Wake
-    "n": 1,
-    "2": 1,  # NREM
-    "r": 2,
-    "3": 2,  # REM
+    "w": 0,  # Wake
+    "n": 1,  # NREM
+    "r": 2,  # REM
+    # "1", "2", "3" are artifact labels — dropped (become NaN)
 }
 
 

@@ -146,7 +146,8 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     # Use ckpt_path="best" to load the weights from the highest val_acc
     # Note: If Bayesian mode doesn't use ModelCheckpoint, set ckpt_path=None
     if cfg.training.mode == "bayesian":
-        pyro.get_param_store().load(pyro_path)
+        state = torch.load(pyro_path, map_location="cpu", weights_only=False)
+        pyro.get_param_store().set_state(state)
         ckpt = None
     else:
         ckpt = "best"

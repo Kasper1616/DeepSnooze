@@ -123,7 +123,7 @@ class BayesianClassificationTask(LightningModule):
         x, y = batch
         elbo_loss = float(self.svi.step(x, y))
         with torch.no_grad():
-            ce_loss = self.criterion(self(x), y).item()
+            ce_loss = self.criterion(self(x).log_softmax(dim=1), y).item()
         self.log("elbo_loss", elbo_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train_loss", ce_loss, on_step=False, on_epoch=True, prog_bar=True)
 

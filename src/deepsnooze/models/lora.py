@@ -28,7 +28,7 @@ class LinearWithLoRA(torch.nn.Module):
 
 
 class BayesianLoRALayer(torch.nn.Module):
-    def __init__(self, in_dim, out_dim, rank, alpha, name="lora"):
+    def __init__(self, in_dim, out_dim, rank, alpha, name="lora", freeze_a=False):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -36,40 +36,45 @@ class BayesianLoRALayer(torch.nn.Module):
         self.alpha = alpha
         self.name = name
         self.std_dev = 1 / torch.sqrt(torch.tensor(rank).float())
+        self.freeze_a = freeze_a
+        if freeze_a:
+            self.register_buffer("A_fixed", torch.randn(in_dim, rank) * self.std_dev)
 
     def forward(self, x):
-        A = pyro.sample(
-            f"{self.name}_A",
-            dist.Normal(0, self.std_dev).expand([self.in_dim, self.rank]).to_event(2),
-        )
+        if self.freeze_a:
+            A = self.A_fixed.to(x.device)
+        else:
+            A = pyro.sample(
+                f"{self.name}_A",
+                dist.Normal(0, self.std_dev).expand([self.in_dim, self.rank]).to_event(2),
+            ).to(x.device)
+            
         B = pyro.sample(
             f"{self.name}_B",
             dist.Normal(0, self.std_dev).expand([self.rank, self.out_dim]).to_event(2),
-        )
-        A = A.to(x.device)
-        B = B.to(x.device)
+        ).to(x.device)
         x = self.alpha * (x @ A @ B)
         return x
 
 
 class BayesianLinearWithLoRA(torch.nn.Module):
-    def __init__(self, linear, rank, alpha, name="lora"):
+    def __init__(self, linear, rank, alpha, name="lora", freeze_a=False):
         super().__init__()
         self.linear = linear
         self.lora = BayesianLoRALayer(
-            linear.in_features, linear.out_features, rank, alpha, name=name
+            linear.in_features, linear.out_features, rank, alpha, name=name, freeze_a=freeze_a
         )
 
     def forward(self, x):
         return self.linear(x) + self.lora(x)
 
 
-def apply_lora(model, rank=4, alpha=16, use_bayesian=False):
+def apply_lora(model, rank=4, alpha=16, use_bayesian=False, freeze_a=False):
     lora_idx = 0
     for i, layer in enumerate(model.fc):
         if isinstance(layer, nn.Linear):
             if use_bayesian:
-                model.fc[i] = BayesianLinearWithLoRA(layer, rank=rank, alpha=alpha, name=f"lora_{lora_idx}")
+                model.fc[i] = BayesianLinearWithLoRA(layer, rank=rank, alpha=alpha, name=f"lora_{lora_idx}", freeze_a=freeze_a)
                 lora_idx += 1
             else:
                 model.fc[i] = LinearWithLoRA(layer, rank=rank, alpha=alpha)
@@ -77,6 +82,8 @@ def apply_lora(model, rank=4, alpha=16, use_bayesian=False):
     # Freeze all base params, only train LoRA params
     for name, param in model.named_parameters():
         if "lora" not in name:
+            param.requires_grad = False
+        elif freeze_a and name.endswith(".A"):
             param.requires_grad = False
 
     if not use_bayesian:

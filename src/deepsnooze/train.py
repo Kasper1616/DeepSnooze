@@ -96,6 +96,7 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
             rank=cfg.training.rank,
             alpha=cfg.training.alpha,
             use_bayesian=(cfg.training.mode == "bayesian"),
+            freeze_a=cfg.training.get("freeze_a", False),
         )
 
     task_cls = TASK_CLASSES.get(cfg.training.mode)

@@ -7,7 +7,7 @@ NOTES="LoRA CV on frozen cnn_standard base. Comparing ranks 1, 2, 4, 8."
 BASE_EXPERIMENT="cnn_standard_cv"
 MODEL="cnn"
 
-for RANK in 1 2 4; do
+for RANK in 8; do
 
 bsub << EOF
 #!/bin/bash
@@ -35,15 +35,14 @@ EOF
 done
 
 NOTES="Bayesian LoRA CV on frozen cnn_standard base. Comparing ranks 1, 2, 4, 8."
-NOTES="LoRA CV on frozen cnn_standard base. Comparing ranks 1, 2, 4, 8."
 BASE_EXPERIMENT="cnn_standard_cv"
 MODEL="cnn"
-for RANK in 1 2 4; do
+for RANK in 8; do
 
 bsub << EOF
 #!/bin/bash
 #BSUB -J bayesian_lora_cv_r${RANK}
-#BSUB -q gpua40
+#BSUB -q gpua10
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"

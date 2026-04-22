@@ -142,7 +142,7 @@ class BayesianClassificationTask(LightningModule):
         self.log("kl_div", kl_div, on_step=False, on_epoch=True, prog_bar=True)
         self.log("log_p_obs", log_p_obs, on_step=False, on_epoch=True, prog_bar=True)
 
-    def validation_step(self, batch, batch_idx, n_samples=30):
+    def validation_step(self, batch, batch_idx, n_samples=10):
         x, y = batch
         # Average softmax probabilities over multiple posterior samples
         probs = []

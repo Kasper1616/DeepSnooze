@@ -8,6 +8,24 @@ from torch.utils.data import DataLoader, Subset
 from deepsnooze.data.dataset import SleepyRatDataset
 
 
+
+from torch.utils.data import Dataset
+
+class TransformSubset(Dataset):
+    """Applies a transform dynamically to a PyTorch Subset."""
+    def __init__(self, subset, transform=None):
+        self.subset = subset
+        self.transform = transform
+
+    def __getitem__(self, idx):
+        x, y = self.subset[idx]
+        if self.transform:
+            x = self.transform(x)
+        return x, y
+
+    def __len__(self):
+        return len(self.subset)
+
 class SleepDataModule(LightningDataModule):
     def __init__(
         self,
@@ -23,12 +41,15 @@ class SleepDataModule(LightningDataModule):
         self.transform = transform
 
     def setup(self, stage=None):
+    
         full = SleepyRatDataset(
-            self.hparams["processed_path"], transform=self.transform
+            self.hparams["processed_path"], transform=None
         )
+        
         val_subject = self.hparams["val_subject"]
         test_subject = self.hparams["test_subject"]
         exclude_subjects = {val_subject, test_subject}
+        
         train_indices = [
             i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects
         ]
@@ -36,9 +57,12 @@ class SleepDataModule(LightningDataModule):
         test_indices = [
             i for i in range(len(full)) if full.subject_of(i) == test_subject
         ]
-        self.train_ds = Subset(full, train_indices)
-        self.val_ds = Subset(full, val_indices)
-        self.test_ds = Subset(full, test_indices)
+        
+        train_raw = Subset(full, train_indices)
+        self.val_ds = Subset(full, val_indices)   
+        self.test_ds = Subset(full, test_indices) 
+
+        self.train_ds = TransformSubset(train_raw, transform=self.transform)
 
         train_labels = np.array(full.labels)[train_indices]
         weights = compute_class_weight(

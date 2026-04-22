@@ -12,7 +12,7 @@ from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
 from deepsnooze.data import SleepDataModule
-from deepsnooze.data.transforms import SpectrogramTransform, StandardizeSignal
+from deepsnooze.data.transforms import SpectrogramTransform, StandardizeSignal, Knockout
 from deepsnooze.models.cnn import DeepCNN, SimpleCNN, SleepyCNN
 from deepsnooze.models.ffnn import DeepSleepFFNN
 from deepsnooze.models.lora import apply_lora
@@ -24,6 +24,7 @@ TRANSFORMS = {
     "none": None,
     "spectrogram": SpectrogramTransform,
     "standardize": StandardizeSignal,
+    "knockout": Knockout,
 }
 
 MODEL_CLASSES = {

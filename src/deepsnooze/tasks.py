@@ -124,8 +124,23 @@ class BayesianClassificationTask(LightningModule):
         elbo_loss = float(self.svi.step(x, y))
         with torch.no_grad():
             ce_loss = self.criterion(self(x).log_softmax(dim=1), y).item()
+            
+            # Extract individual ELBO terms from traces to monitor posterior collapse
+            guide_trace = pyro.poutine.trace(self.guide).get_trace(x, y)
+            guide_trace.compute_log_prob()
+            model_trace = pyro.poutine.trace(pyro.poutine.replay(self.pyro_model, trace=guide_trace)).get_trace(x, y)
+            model_trace.compute_log_prob()
+
+            log_p_obs = sum(site["log_prob"].sum().item() for name, site in model_trace.nodes.items() if site["type"] == "sample" and site["is_observed"])
+            log_p_latent = sum(site["log_prob"].sum().item() for name, site in model_trace.nodes.items() if site["type"] == "sample" and not site["is_observed"])
+            log_q_latent = sum(site["log_prob"].sum().item() for name, site in guide_trace.nodes.items() if site["type"] == "sample")
+
+            kl_div = log_q_latent - log_p_latent
+
         self.log("elbo_loss", elbo_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train_loss", ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("kl_div", kl_div, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("log_p_obs", log_p_obs, on_step=False, on_epoch=True, prog_bar=True)
 
     def validation_step(self, batch, batch_idx, n_samples=30):
         x, y = batch

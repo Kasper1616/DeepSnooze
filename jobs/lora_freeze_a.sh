@@ -13,8 +13,6 @@ bsub << EOF
 #BSUB -o lora_deep_r1_freeze_a.out
 #BSUB -e lora_deep_r1_freeze_a.err
 
-source ~/.bashrc
-cd ~/Desktop/Deepsnooze
 uv run python -m deepsnooze.train model=cnn_deep training=lora_freeze_a training.rank=1 wandb.group=lora_freeze_a "wandb.notes='LoRA rank=1 with frozen A matrix.'"
 EOF
 
@@ -29,8 +27,6 @@ bsub << EOF
 #BSUB -o bayesian_lora_deep_r1_freeze_a.out
 #BSUB -e bayesian_lora_deep_r1_freeze_a.err
 
-source ~/.bashrc
-cd ~/Desktop/Deepsnooze
 uv run python -m deepsnooze.train model=cnn_deep training=bayesian_lora_freeze_a training.rank=1 wandb.group=lora_freeze_a "wandb.notes='Bayesian LoRA rank=1 with frozen A matrix.'"
 EOF
 
@@ -45,8 +41,6 @@ bsub << EOF
 #BSUB -o lora_deep_r2_freeze_a.out
 #BSUB -e lora_deep_r2_freeze_a.err
 
-source ~/.bashrc
-cd ~/Desktop/Deepsnooze
 uv run python -m deepsnooze.train model=cnn_deep training=lora_freeze_a training.rank=2 wandb.group=lora_freeze_a "wandb.notes='LoRA rank=2 with frozen A matrix.'"
 EOF
 
@@ -61,8 +55,6 @@ bsub << EOF
 #BSUB -o bayesian_lora_deep_r2_freeze_a.out
 #BSUB -e bayesian_lora_deep_r2_freeze_a.err
 
-source ~/.bashrc
-cd ~/Desktop/Deepsnooze
 uv run python -m deepsnooze.train model=cnn_deep training=bayesian_lora_freeze_a training.rank=2 wandb.group=lora_freeze_a "wandb.notes='Bayesian LoRA rank=2 with frozen A matrix.'"
 EOF
 

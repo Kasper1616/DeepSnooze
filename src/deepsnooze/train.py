@@ -82,9 +82,10 @@ def run_fold(cfg: DictConfig, fold_idx: int, subjects: str) -> float:
     model = build_model(cfg)
     if cfg.training.lora:
         base_experiment = cfg.training.get("base_experiment")
-        if not base_experiment:
-            raise ValueError("training.base_experiment must be set when lora=true")
-        base_ckpt_path = Path("models") / f"{base_experiment}_val_{val_subject}_test_{test_subject}.ckpt"
+        if base_experiment:
+            base_ckpt_path = Path("models") / f"{base_experiment}_val_{val_subject}_test_{test_subject}.ckpt"
+        else:
+            base_ckpt_path = Path("models") / f"{cfg.model.name}_base.pt"
         if not base_ckpt_path.exists():
             raise FileNotFoundError(f"Base checkpoint not found: {base_ckpt_path}")
         ckpt = torch.load(base_ckpt_path, weights_only=True, map_location="cpu")

@@ -5,7 +5,7 @@
 bsub << EOF
 #!/bin/bash
 #BSUB -J lora_deep_r1_freeze_a
-#BSUB -q gpua40
+#BSUB -q gpuv100
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"
@@ -21,7 +21,7 @@ EOF
 bsub << EOF
 #!/bin/bash
 #BSUB -J bayesian_lora_deep_r1_freeze_a
-#BSUB -q gpuh100
+#BSUB -q gpuv100
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"
@@ -37,7 +37,7 @@ EOF
 bsub << EOF
 #!/bin/bash
 #BSUB -J lora_deep_r2_freeze_a
-#BSUB -q gpuh100
+#BSUB -q gpuv100
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"
@@ -53,7 +53,7 @@ EOF
 bsub << EOF
 #!/bin/bash
 #BSUB -J bayesian_lora_deep_r2_freeze_a
-#BSUB -q gpuh100
+#BSUB -q gpuv100
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 8
 #BSUB -R "rusage[mem=8GB]"

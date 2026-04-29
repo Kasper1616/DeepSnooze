@@ -2,4 +2,4 @@ processed_path: data/spectrograms
 val_subject: A1
 test_subject: D6
 transform: knockout
-cv_subjects: null
+cv_subjects: ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7','C8', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6']

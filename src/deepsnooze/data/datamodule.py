@@ -35,21 +35,23 @@ class SleepDataModule(LightningDataModule):
         test_subject="D6",
         num_workers=7,
         transform=None,
+        test_transform=None,
     ):
         super().__init__()
-        self.save_hyperparameters(ignore=["transform"])
+        self.save_hyperparameters(ignore=["transform", "test_transform"])
         self.transform = transform
+        self.test_transform = test_transform
 
     def setup(self, stage=None):
-    
+
         full = SleepyRatDataset(
             self.hparams["processed_path"], transform=None
         )
-        
+
         val_subject = self.hparams["val_subject"]
         test_subject = self.hparams["test_subject"]
         exclude_subjects = {val_subject, test_subject}
-        
+
         train_indices = [
             i for i in range(len(full)) if full.subject_of(i) not in exclude_subjects
         ]
@@ -57,12 +59,13 @@ class SleepDataModule(LightningDataModule):
         test_indices = [
             i for i in range(len(full)) if full.subject_of(i) == test_subject
         ]
-        
+
         train_raw = Subset(full, train_indices)
-        self.val_ds = Subset(full, val_indices)   
-        self.test_ds = Subset(full, test_indices) 
+        self.val_ds = Subset(full, val_indices)
+        test_raw = Subset(full, test_indices)
 
         self.train_ds = TransformSubset(train_raw, transform=self.transform)
+        self.test_ds = TransformSubset(test_raw, transform=self.test_transform)
 
         train_labels = np.array(full.labels)[train_indices]
         weights = compute_class_weight(

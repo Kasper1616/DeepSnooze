@@ -11,7 +11,7 @@ class Knockout:
         self.p = probability
 
     def __call__(self, x):
-        
+
         M = torch.zeros_like(x, dtype=torch.bool)
 
         if torch.rand(1).item() < self.p:
@@ -20,5 +20,17 @@ class Knockout:
 
         x_aug = x.clone()
         x_aug[M] = self.placeholder
-        
+
+        return x_aug
+
+
+class ChannelKnockout:
+    """Deterministically zeros out a single channel with the sentinel placeholder."""
+    def __init__(self, channel: int, placeholder_value: float = -100.0):
+        self.channel = channel
+        self.placeholder = placeholder_value
+
+    def __call__(self, x):
+        x_aug = x.clone()
+        x_aug[self.channel] = self.placeholder
         return x_aug

@@ -69,6 +69,15 @@ class BayesianLinearWithLoRA(torch.nn.Module):
         return self.linear(x) + self.lora(x)
 
 
+def _disable_dropout(model):
+    """Replace all dropout layers with Identity — survives model.train() calls."""
+    for name, module in model.named_children():
+        if isinstance(module, (nn.Dropout, nn.Dropout2d)):
+            setattr(model, name, nn.Identity())
+        else:
+            _disable_dropout(module)
+
+
 def apply_lora(model, rank=4, alpha=16, use_bayesian=False, freeze_a=False):
     lora_idx = 0
     for i, layer in enumerate(model.fc):
@@ -85,6 +94,10 @@ def apply_lora(model, rank=4, alpha=16, use_bayesian=False, freeze_a=False):
             param.requires_grad = False
         elif freeze_a and name.endswith(".A"):
             param.requires_grad = False
+
+    # Dropout conflicts with Bayesian posterior sampling — remove it permanently
+    if use_bayesian:
+        _disable_dropout(model)
 
     if not use_bayesian:
         lora_params = sum(p.numel() for p in model.parameters() if p.requires_grad)

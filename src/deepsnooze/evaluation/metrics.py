@@ -45,8 +45,10 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
         ece += mask.sum() * abs(acc_bin - conf_bin)
     ece /= len(y_true)
 
-    # --- Per-class F1 ---
+    # --- Per-class and aggregate F1 ---
     per_class_f1 = f1_score(y_true, y_pred, labels=list(range(len(target_names))), average=None, zero_division=0)
+    macro_f1 = f1_score(y_true, y_pred, labels=list(range(len(target_names))), average="macro", zero_division=0)
+    weighted_f1 = f1_score(y_true, y_pred, labels=list(range(len(target_names))), average="weighted", zero_division=0)
 
     calibration = (
         f"\n"
@@ -60,6 +62,8 @@ def custom_classification_report(y_true, y_prob, target_names=None, n_bins=10):
         "nll": float(nll),
         "ece": float(ece),
         "brier": float(brier),
+        "f1_macro": float(macro_f1),
+        "f1_weighted": float(weighted_f1),
         **{f"f1_{name.lower()}": float(f1) for name, f1 in zip(target_names, per_class_f1)},
     }
 

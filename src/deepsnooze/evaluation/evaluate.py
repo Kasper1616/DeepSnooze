@@ -122,43 +122,50 @@ def main(cfg: DictConfig):
         (f"ko_ch{c}", ChannelKnockout(channel=c)) for c in range(NUM_CHANNELS)
     ]
 
-    _F1_KEYS = ["test_f1_wake", "test_f1_nrem", "test_f1_rem"]
+    _CLASSES = ["wake", "nrem", "rem"]
 
     results = {}
     for label, test_transform in conditions:
         dm = build_datamodule(cfg, test_transform=test_transform)
         out = trainer.test(task, datamodule=dm, verbose=False)
         r = out[0]
-        f1_vals = [r.get(k, float("nan")) for k in _F1_KEYS]
         results[label] = {
-            "acc": r.get("test_acc", float("nan")),
-            "nll": r.get("test_nll", float("nan")),
-            "f1":  sum(f1_vals) / len(f1_vals),  # macro F1
+            "acc":         r.get("test_acc", float("nan")),
+            "nll":         r.get("test_nll", float("nan")),
+            "f1_macro":    r.get("test_f1_macro", float("nan")),
+            "f1_weighted": r.get("test_f1_weighted", float("nan")),
+            **{f"f1_{cls}": r.get(f"test_f1_{cls}", float("nan")) for cls in _CLASSES},
         }
 
     # Log condition-labeled metrics so they're distinguishable in WandB
     log_dict = {}
     for label, m in results.items():
-        log_dict[f"eval/{label}_acc"] = m["acc"]
-        log_dict[f"eval/{label}_nll"] = m["nll"]
-        log_dict[f"eval/{label}_f1"]  = m["f1"]
+        log_dict[f"eval/{label}_acc"]         = m["acc"]
+        log_dict[f"eval/{label}_nll"]         = m["nll"]
+        log_dict[f"eval/{label}_f1_macro"]    = m["f1_macro"]
+        log_dict[f"eval/{label}_f1_weighted"] = m["f1_weighted"]
+        for cls in _CLASSES:
+            log_dict[f"eval/{label}_f1_{cls}"] = m[f"f1_{cls}"]
     clean = results["clean"]
     for c in range(NUM_CHANNELS):
         ko = results[f"ko_ch{c}"]
-        log_dict[f"eval/drop_ch{c}_acc"] = clean["acc"] - ko["acc"]
-        log_dict[f"eval/drop_ch{c}_nll"] = ko["nll"] - clean["nll"]  # higher NLL = worse
-        log_dict[f"eval/drop_ch{c}_f1"]  = clean["f1"] - ko["f1"]
+        log_dict[f"eval/drop_ch{c}_acc"]         = clean["acc"] - ko["acc"]
+        log_dict[f"eval/drop_ch{c}_nll"]         = ko["nll"] - clean["nll"]
+        log_dict[f"eval/drop_ch{c}_f1_macro"]    = clean["f1_macro"] - ko["f1_macro"]
+        log_dict[f"eval/drop_ch{c}_f1_weighted"] = clean["f1_weighted"] - ko["f1_weighted"]
+        for cls in _CLASSES:
+            log_dict[f"eval/drop_ch{c}_f1_{cls}"] = clean[f"f1_{cls}"] - ko[f"f1_{cls}"]
     logger.experiment.log(log_dict)
 
     print("\n--- Knockout Robustness Results ---")
-    print(f"{'Condition':<12}  {'acc':>8}  {'nll':>8}  {'f1':>8}")
-    print("-" * 44)
+    print(f"{'Condition':<12}  {'acc':>8}  {'nll':>8}  {'f1_mac':>8}  {'f1_wtd':>8}  {'wake':>8}  {'nrem':>8}  {'rem':>8}")
+    print("-" * 84)
     for label, m in results.items():
-        print(f"{label:<12}  {m['acc']:>8.4f}  {m['nll']:>8.4f}  {m['f1']:>8.4f}")
+        print(f"{label:<12}  {m['acc']:>8.4f}  {m['nll']:>8.4f}  {m['f1_macro']:>8.4f}  {m['f1_weighted']:>8.4f}  {m['f1_wake']:>8.4f}  {m['f1_nrem']:>8.4f}  {m['f1_rem']:>8.4f}")
     print("\n--- Drop vs Clean ---")
     for c in range(NUM_CHANNELS):
         ko = results[f"ko_ch{c}"]
-        print(f"  channel {c}:  acc {clean['acc'] - ko['acc']:+.4f}  nll {ko['nll'] - clean['nll']:+.4f}  f1 {clean['f1'] - ko['f1']:+.4f}")
+        print(f"  channel {c}:  acc {clean['acc']-ko['acc']:+.4f}  nll {ko['nll']-clean['nll']:+.4f}  f1_mac {clean['f1_macro']-ko['f1_macro']:+.4f}  f1_wtd {clean['f1_weighted']-ko['f1_weighted']:+.4f}  wake {clean['f1_wake']-ko['f1_wake']:+.4f}  nrem {clean['f1_nrem']-ko['f1_nrem']:+.4f}  rem {clean['f1_rem']-ko['f1_rem']:+.4f}")
 
     wandb.finish()
 
